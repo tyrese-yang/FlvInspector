@@ -1,0 +1,223 @@
+<html>
+
+<head>
+    <style>
+        div.tags_window {
+            display: inline-block;
+            width: 40%;
+            height: 95%;
+            overflow: scroll;
+        }
+
+        div.tag_detail {
+            display: inline-block;
+            width: 50%;
+            height: 95%;
+            overflow: scroll;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <input id="files" name="files[]" type="file" />
+        <button id="read" name="read">read</button>
+    </div>
+    <div class="tags_window">
+        <ul id="flv_struct"></ul>
+    </div>
+    <div class="tag_detail" id="detail">
+        <pre id="hexdump"></pre>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.1/jquery.min.js"></script>
+
+    <script>
+        function hexdump(data) {
+            var lines = [];
+            for (var i = 0; i < data.length; i += 16) {
+                var address = i.toString(16).padStart(8, '0');
+                var block = data.slice(i, i + 16);
+                var hexArray = [];
+                var asciiArray = [];
+                var padding = [];
+
+                for (var value of block) {
+                    hexArray.push(value.toString(16).padStart(2, '0'));
+                    // printable ascii charactor exclude '>' and '<'
+                    asciiArray.push(value >= 0x20 && value < 0x7f && value != 0x3c && value != 0x3e ? String.fromCharCode(value) : ".");
+                }
+
+                if (hexArray.length < 16) {
+                    var space = 16 - hexArray.length;
+                    padding = ' '.repeat(space * 2 + space + (hexArray.length < 9 ? 1 : 0));
+                }
+
+                var hexString = hexArray.length > 8 ? hexArray.slice(0, 8).join(' ') + '  ' + hexArray.slice(8).join(' ') : hexArray.join(' ');
+                var asciiString = asciiArray.join('');
+                var line = `${address}  ${hexString}  ${padding}|${asciiString}|`
+                lines.push(line);
+            }
+            return lines.join('\n');
+        }
+
+        function showTagDetail(e) {
+            $("#hexdump").empty();
+            var lines = hexdump(parser.data.slice(e.data.start, e.data.end));
+            $("#hexdump").append(lines);
+        }
+
+        function flvParseDone() {
+            $("#flv_struct").empty();
+            $("#hexdump").empty();
+            var li = $("<li>FLV header</li>");
+            li.append($("<ul>" + "version: " + parser.version + "</ul>"));
+            li.append($("<ul>" + "have audio: " + parser.haveAudio + "</ul>"));
+            li.append($("<ul>" + "have video: " + parser.haveVideo + "</ul>"));
+            $("#flv_struct").append(li)
+            for (var tag of parser.tags) {
+                var pts = tag.dts + tag.cts;
+                var frameType = ""
+                if (tag.type == 9 && tag.frameType == 1) {
+                    frameType = "key";
+                }
+                $("#flv_struct").append($("<li>" + tag.getTypeName() + " dts: " + tag.dts + " pts: " + pts + " size: " + tag.size + " " + frameType + "</li>").click(tag, showTagDetail));
+            }
+        }
+    </script>
+
+    <script>
+        class FlvTag {
+            constructor() {
+                this.type = 0;
+                this.size = 0;
+                this.dts = 0;
+                this.streamId = 0;
+
+                // audio tag header
+                this.soundFormat = 0;
+                this.soundRate = 0;
+                this.soundSize = 0;
+                this.soundType = 0;
+                // aac packet
+                this.aacPacketType = 0;
+
+                // video tag header
+                this.frameType = 0;
+                this.codecId = 0;
+                // avc packet
+                this.avcPacketType = 0;
+                this.cts = 0;
+
+                this.start = 0;
+                this.end = 0;
+            }
+
+            getTypeName() {
+                switch (this.type) {
+                    case 8:
+                        return "audio";
+                    case 9:
+                        return "video";
+                    case 18:
+                        return "script";
+                    default:
+                        return "unknown";
+                }
+            }
+        }
+
+        class FlvParser {
+            constructor() {
+                // header
+                this.version = 0;
+                this.haveAudio = 0;
+                this.haveVideo = 0;
+
+                this.offset = 0;
+                this.length = 0;
+                this.tags = [];
+                this.parseDone = function () { console.log("done") };
+            }
+
+            setData(data) {
+                this.data = data;
+                this.length = data.length
+            }
+
+            parseData() {
+                // 'F' 'L' 'V'
+                if (this.data[0] != 70 || this.data[1] != 76 || this.data[2] != 86) {
+                    alert("not FLV file");
+                }
+                this.version = this.data[3];
+                this.haveAudio = this.data[4] >>> 2 & 0x01;
+                this.haveVideo = this.data[4] & 0x01;
+                if (this.data[8] != 9) {
+                    alert("parse failed")
+                }
+                this.offset = 9;
+                while (this.offset < this.length) {
+                    this.offset += 4; // previous tag size
+                    var tag = new FlvTag;
+                    tag.start = this.offset;
+                    tag.type = this.data[this.offset] & 0x1f;
+                    this.offset++;
+                    tag.size = this.data[this.offset] << 16 | this.data[this.offset + 1] << 8 | this.data[this.offset + 2];
+                    this.offset += 3;
+                    tag.dts = this.data[this.offset + 3] << 24 | this.data[this.offset] << 16 | this.data[this.offset + 1] << 8 | this.data[this.offset + 2];
+                    this.offset += 7; // include StreamID
+                    if (tag.type == 8) { // audio
+                        tag.soundFormat = this.data[this.offset] >>> 4 & 0x0f;
+                        tag.soundRate = this.data[this.offset] >>> 2 & 0x03;
+                        tag.soundSize = this.data[this.offset] >>> 1 & 0x01;
+                        tag.soundType = this.data[this.offset] & 0x01;
+                        if (tag.soundFormat == 10) {
+                            tag.aacPacketType = this.data[this.offset + 1];
+                        }
+                    } else if (tag.type == 9) { // video
+                        tag.frameType = this.data[this.offset] >>> 4 & 0x0f;
+                        tag.codecId = this.data[this.offset] & 0x0f;
+                        if (tag.codecId == 7) {
+                            tag.avcPacketType = this.data[this.offset + 1];
+                            if (tag.avcPacketType == 1) {
+                                tag.cts = this.data[this.offset + 2] << 16 | this.data[this.offset + 3] << 8 | this.data[this.offset + 4];
+                            }
+                        }
+                    }
+                    this.offset += tag.size;
+                    tag.end = this.offset;
+                    // console.log(tag);
+                    this.tags.push(tag);
+                }
+                this.parseDone()
+            }
+        }
+
+        var parser;
+
+        function handleFileSelect(e) {
+            var offset = 0;
+            var files = document.getElementById("files").files;
+            if (files.length == 0) {
+                alert("Please select a file");
+                return;
+            }
+            var file = files[0];
+            var reader = new FileReader;
+            reader.onload = function (e) {
+                var buffer = reader.result;
+                parser = new FlvParser;
+                parser.setData(new Uint8Array(buffer));
+                parser.parseDone = flvParseDone;
+                parser.parseData();
+            }
+            reader.readAsArrayBuffer(file);
+        }
+
+        document.getElementById("read").addEventListener('click',
+            handleFileSelect, false);
+    </script>
+</body>
+
+</html>
