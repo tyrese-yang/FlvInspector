@@ -2,31 +2,48 @@
 
 <head>
     <style>
-        div.tags_window {
+        .tags_window {
             display: inline-block;
             width: 40%;
             height: 95%;
             overflow: scroll;
+            border: 1px solid black;
         }
 
-        div.tag_detail {
+        .tag_detail {
             display: inline-block;
             width: 50%;
             height: 95%;
             overflow: scroll;
+            border: 1px solid black;
+        }
+
+        .tags_table {
+            border-spacing: 0px;
+            border-collapse: collapse;
+        }
+
+        .tags_table table,
+        td {
+            border: 1px solid #333;
+        }
+
+        .tags_table thead {
+            background-color: #333;
+            color: #fff;
         }
     </style>
 </head>
 
 <body>
-    <div>
+    <div style="height: 35;">
         <input id="files" name="files[]" type="file" />
-        <button id="read" name="read">read</button>
+        <button id="read" name="read">Parse</button>
     </div>
     <div class="tags_window">
-        <ul id="flv_struct"></ul>
+        <table class="tags_table" id="tags_info"></table>
     </div>
-    <div class="tag_detail" id="detail">
+    <div class="tag_detail">
         <pre id="hexdump"></pre>
     </div>
 
@@ -68,20 +85,23 @@
         }
 
         function flvParseDone() {
-            $("#flv_struct").empty();
-            $("#hexdump").empty();
-            var li = $("<li>FLV header</li>");
-            li.append($("<ul>" + "version: " + parser.version + "</ul>"));
-            li.append($("<ul>" + "have audio: " + parser.haveAudio + "</ul>"));
-            li.append($("<ul>" + "have video: " + parser.haveVideo + "</ul>"));
-            $("#flv_struct").append(li)
+            var tableHeader = $("<thead></thead>");
+            var tabelRow = $("<tr></tr>");
+            tabelRow.append($("<th>Type</th><th>DTS</th><th>PTS</th><th>Size</th><th>FrameType</th>"));
+            tableHeader.append(tabelRow);
+            $("#tags_info").append(tableHeader);
             for (var tag of parser.tags) {
                 var pts = tag.dts + tag.cts;
                 var frameType = ""
                 if (tag.type == 9 && tag.frameType == 1) {
                     frameType = "key";
                 }
-                $("#flv_struct").append($("<li>" + tag.getTypeName() + " dts: " + tag.dts + " pts: " + pts + " size: " + tag.size + " " + frameType + "</li>").click(tag, showTagDetail));
+                var tableBody = $("<tbody></tbody>");
+                var tabelRow = $("<tr></tr>");
+                tabelRow.append("<td>" + tag.getTypeName() + "</td>" + "<td>" + tag.dts + "</td>" + "<td>" + pts + "</td>" + "<td>" + tag.size + "</td>" + "<td>" + frameType + "</td>");
+                tabelRow.click(tag, showTagDetail);
+                tableBody.append(tabelRow);
+                $("#tags_info").append(tableBody);
             }
         }
     </script>
@@ -190,10 +210,12 @@
                     // console.log(tag);
                     this.tags.push(tag);
                 }
-                this.parseDone()
+                this.parseDone();
             }
         }
+    </script>
 
+    <script>
         var parser;
 
         function handleFileSelect(e) {
@@ -206,6 +228,8 @@
             var file = files[0];
             var reader = new FileReader;
             reader.onload = function (e) {
+                $("#tags_info").empty();
+                $("#hexdump").empty();
                 var buffer = reader.result;
                 parser = new FlvParser;
                 parser.setData(new Uint8Array(buffer));
