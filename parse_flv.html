@@ -44,6 +44,8 @@
         <table class="tags_table" id="tags_info"></table>
     </div>
     <div class="tag_detail">
+        Detail
+        <div id="frame_info"></div>
         <pre id="hexdump"></pre>
     </div>
 
@@ -79,8 +81,32 @@
         }
 
         function showTagDetail(e) {
+            var tag = e.data;
             $("#hexdump").empty();
-            var lines = hexdump(parser.data.slice(e.data.start, e.data.end));
+            $("#frame_info").empty();
+
+            $("#frame_info").append("type: " + tag.type);
+            $("#frame_info").append("<br />dts: " + tag.dts);
+            $("#frame_info").append("<br />cts: " + tag.cts);
+            $("#frame_info").append("<br />pts: " + tag.pts);
+            $("#frame_info").append("<br />size: " + tag.size);
+            if (tag.type == 8) {
+                $("#frame_info").append("<br />sound format: " + tag.soundFormat);
+                $("#frame_info").append("<br />sound rate: " + tag.soundRate);
+                $("#frame_info").append("<br />sound size: " + tag.soundSize);
+                $("#frame_info").append("<br />sound type: " + tag.soundType);
+                if (tag.soundFormat == 10) {
+                    $("#frame_info").append("<br />aac packet type: " + tag.aacPacketType);
+                }
+            } else if (tag.type == 9) {
+                $("#frame_info").append("<br />frame type: " + tag.frameType);
+                $("#frame_info").append("<br />codec id: " + tag.codecId);
+                if (tag.codecId == 7) {
+                    $("#frame_info").append("<br />avc packet type: " + tag.avcPacketType);
+                }
+            }
+
+            var lines = hexdump(parser.data.slice(tag.start, tag.end));
             $("#hexdump").append(lines);
         }
 
@@ -91,14 +117,20 @@
             tableHeader.append(tabelRow);
             $("#tags_info").append(tableHeader);
             for (var tag of parser.tags) {
-                var pts = tag.dts + tag.cts;
                 var frameType = ""
                 if (tag.type == 9 && tag.frameType == 1) {
                     frameType = "key";
+                    if (tag.avcPacketType == 0) {
+                        frameType += ", avc_header";
+                    }
+                } else if (tag.type == 8) {
+                    if (tag.soundFormat == 10 && tag.aacPacketType == 0) {
+                        frameType = "aac_header";
+                    }
                 }
                 var tableBody = $("<tbody></tbody>");
                 var tabelRow = $("<tr></tr>");
-                tabelRow.append("<td>" + tag.getTypeName() + "</td>" + "<td>" + tag.dts + "</td>" + "<td>" + pts + "</td>" + "<td>" + tag.size + "</td>" + "<td>" + frameType + "</td>");
+                tabelRow.append("<td>" + tag.getTypeName() + "</td>" + "<td>" + tag.dts + "</td>" + "<td>" + tag.pts + "</td>" + "<td>" + tag.size + "</td>" + "<td>" + frameType + "</td>");
                 tabelRow.click(tag, showTagDetail);
                 tableBody.append(tabelRow);
                 $("#tags_info").append(tableBody);
@@ -112,6 +144,7 @@
                 this.type = 0;
                 this.size = 0;
                 this.dts = 0;
+                this.pts = 0;
                 this.streamId = 0;
 
                 // audio tag header
@@ -169,12 +202,14 @@
                 // 'F' 'L' 'V'
                 if (this.data[0] != 70 || this.data[1] != 76 || this.data[2] != 86) {
                     alert("not FLV file");
+                    return
                 }
                 this.version = this.data[3];
                 this.haveAudio = this.data[4] >>> 2 & 0x01;
                 this.haveVideo = this.data[4] & 0x01;
                 if (this.data[8] != 9) {
                     alert("parse failed")
+                    return
                 }
                 this.offset = 9;
                 while (this.offset < this.length) {
@@ -186,6 +221,7 @@
                     tag.size = this.data[this.offset] << 16 | this.data[this.offset + 1] << 8 | this.data[this.offset + 2];
                     this.offset += 3;
                     tag.dts = this.data[this.offset + 3] << 24 | this.data[this.offset] << 16 | this.data[this.offset + 1] << 8 | this.data[this.offset + 2];
+                    tag.pts = tag.dts;
                     this.offset += 7; // include StreamID
                     if (tag.type == 8) { // audio
                         tag.soundFormat = this.data[this.offset] >>> 4 & 0x0f;
@@ -202,6 +238,7 @@
                             tag.avcPacketType = this.data[this.offset + 1];
                             if (tag.avcPacketType == 1) {
                                 tag.cts = this.data[this.offset + 2] << 16 | this.data[this.offset + 3] << 8 | this.data[this.offset + 4];
+                                tag.pts += tag.cts;
                             }
                         }
                     }
@@ -229,6 +266,7 @@
             var reader = new FileReader;
             reader.onload = function (e) {
                 $("#tags_info").empty();
+                $("#frame_info").empty();
                 $("#hexdump").empty();
                 var buffer = reader.result;
                 parser = new FlvParser;
