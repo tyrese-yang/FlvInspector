@@ -40,6 +40,8 @@
     <div style="height: 35;">
         <input id="files" name="files[]" type="file" />
         <button id="read" name="read">Parse</button>
+        frame range
+        <select id="frame_range" onchange="rangeChange()"></select>
     </div>
     <div class="tags_window">
         <table class="tags_table" id="tags_info"></table>
@@ -111,13 +113,21 @@
             $("#hexdump").append(lines);
         }
 
-        function flvParseDone() {
+        const max_range = 1000;
+        // show range [start : end)
+        function showRange(start, end) {
+            console.log(start,end);
+            $("#tags_info").empty();
+            $("#frame_info").empty();
+            $("#hexdump").empty();
+
             var tableHeader = $("<thead></thead>");
-            var tabelRow = $("<tr></tr>");
-            tabelRow.append($("<th>Type</th><th>DTS</th><th>PTS</th><th>Size</th><th>FrameType</th>"));
-            tableHeader.append(tabelRow);
+            var tableRow = $("<tr></tr>");
+            tableRow.append($("<th>No.</th><th>Type</th><th>DTS</th><th>PTS</th><th>Size</th><th>FrameType</th>"));
+            tableHeader.append(tableRow);
             $("#tags_info").append(tableHeader);
-            for (var tag of parser.tags) {
+            for (var i = start; i < end; i++) {
+                var tag = parser.tags[i];
                 var frameType = ""
                 if (tag.type == 9 && tag.frameType == 1) {
                     frameType = "key";
@@ -130,12 +140,31 @@
                     }
                 }
                 var tableBody = $("<tbody></tbody>");
-                var tabelRow = $("<tr></tr>");
-                tabelRow.append("<td>" + tag.getTypeName() + "</td>" + "<td>" + tag.dts + "</td>" + "<td>" + tag.pts + "</td>" + "<td>" + tag.size + "</td>" + "<td>" + frameType + "</td>");
-                tabelRow.click(tag, showTagDetail);
-                tableBody.append(tabelRow);
+                var tableRow = $("<tr></tr>");
+                var num = i+1;
+                tableRow.append("<td>" + num + "</td><td>" + tag.getTypeName() + "</td><td>" + tag.dts + "</td><td>" + tag.pts + "</td><td>" + tag.size + "</td><td>" + frameType + "</td>");
+                tableRow.click(tag, showTagDetail);
+                tableBody.append(tableRow);
                 $("#tags_info").append(tableBody);
             }
+        }
+
+        function rangeChange() {
+            var start = parseInt($("#frame_range option:selected").val());
+            var end = start+max_range;
+            showRange(start, end);
+        }
+
+        function flvParseDone() {
+            for (var i = 0; i < parser.tags.length; i+=max_range) {
+                var start = i+1;
+                var end = i+max_range < parser.tags.length ? i+max_range : parser.tags.length;
+                $("#frame_range").append($("<option value=" + i + ">" + start + "~" + end +"</end>"));
+            }
+
+            //show first range
+            var first_range = parser.tags.length > max_range ? max_range: parser.tags.length;
+            showRange(0, first_range);
         }
     </script>
 
