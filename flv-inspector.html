@@ -33,13 +33,40 @@
             background-color: #333;
             color: #fff;
         }
+
+        .myButton {
+            box-shadow: inset 0px 1px 0px 0px #ffffff;
+            background: linear-gradient(to bottom, #f9f9f9 5%, #e9e9e9 100%);
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            border: 1px solid #dcdcdc;
+            display: inline-block;
+            cursor: pointer;
+            color: #666666;
+            font-family: Arial;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 6px 24px;
+            text-decoration: none;
+            text-shadow: 0px 1px 0px #ffffff;
+        }
+
+        .myButton:hover {
+            background: linear-gradient(to bottom, #e9e9e9 5%, #f9f9f9 100%);
+            background-color: #e9e9e9;
+        }
+
+        .myButton:active {
+            position: relative;
+            top: 1px;
+        }
     </style>
 </head>
 
 <body>
     <div style="height: 35;">
         <input id="files" name="files[]" type="file" />
-        <button id="read" name="read">Parse</button>
+        <button class="myButton" onclick="parse()">Parse</button>
         frame range
         <select id="frame_range" onchange="rangeChange()"></select>
     </div>
@@ -116,7 +143,7 @@
         const max_range = 1000;
         // show range [start : end)
         function showRange(start, end) {
-            console.log(start,end);
+            console.log(start, end);
             $("#tags_info").empty();
             $("#frame_info").empty();
             $("#hexdump").empty();
@@ -141,7 +168,7 @@
                 }
                 var tableBody = $("<tbody></tbody>");
                 var tableRow = $("<tr></tr>");
-                var num = i+1;
+                var num = i + 1;
                 tableRow.append("<td>" + num + "</td><td>" + tag.getTypeName() + "</td><td>" + tag.dts + "</td><td>" + tag.pts + "</td><td>" + tag.size + "</td><td>" + frameType + "</td>");
                 tableRow.click(tag, showTagDetail);
                 tableBody.append(tableRow);
@@ -151,19 +178,19 @@
 
         function rangeChange() {
             var start = parseInt($("#frame_range option:selected").val());
-            var end = start+max_range;
+            var end = start + max_range;
             showRange(start, end);
         }
 
         function flvParseDone() {
-            for (var i = 0; i < parser.tags.length; i+=max_range) {
-                var start = i+1;
-                var end = i+max_range < parser.tags.length ? i+max_range : parser.tags.length;
-                $("#frame_range").append($("<option value=" + i + ">" + start + "~" + end +"</end>"));
+            for (var i = 0; i < parser.tags.length; i += max_range) {
+                var start = i + 1;
+                var end = i + max_range < parser.tags.length ? i + max_range : parser.tags.length;
+                $("#frame_range").append($("<option value=" + i + ">" + start + "~" + end + "</end>"));
             }
 
             //show first range
-            var first_range = parser.tags.length > max_range ? max_range: parser.tags.length;
+            var first_range = parser.tags.length > max_range ? max_range : parser.tags.length;
             showRange(0, first_range);
         }
     </script>
@@ -285,7 +312,12 @@
     <script>
         var parser;
 
-        function handleFileSelect(e) {
+        function parse(e) {
+            $("#tags_info").empty();
+            $("#frame_info").empty();
+            $("#hexdump").empty();
+            $("#frame_range").empty();
+
             var offset = 0;
             var files = document.getElementById("files").files;
             if (files.length == 0) {
@@ -295,9 +327,6 @@
             var file = files[0];
             var reader = new FileReader;
             reader.onload = function (e) {
-                $("#tags_info").empty();
-                $("#frame_info").empty();
-                $("#hexdump").empty();
                 var buffer = reader.result;
                 parser = new FlvParser;
                 parser.setData(new Uint8Array(buffer));
@@ -306,9 +335,6 @@
             }
             reader.readAsArrayBuffer(file);
         }
-
-        document.getElementById("read").addEventListener('click',
-            handleFileSelect, false);
     </script>
 </body>
 
