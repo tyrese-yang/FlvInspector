@@ -78,7 +78,7 @@
     <div class="tag_detail">
         Detail
         <div id="frame_info"></div>
-        <pre id="hexdump"></pre>
+        <div id="hexdump"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.1/jquery.min.js"></script>
@@ -138,8 +138,42 @@
                 }
             }
 
-            var lines = hexdump(parser.data.slice(tag.start, tag.end));
-            $("#hexdump").append(lines);
+            if (tag.codecId == 7 && tag.avcPacketType == 1) {
+                // if tag contains h264 nalu data, split it
+                var tag_header = hexdump(parser.data.slice(tag.start, tag.payload_start));
+                $("#hexdump").append("<br />");
+                $("#hexdump").append("FLV tag header");
+                $("#hexdump").append("<pre>" + tag_header + "</pre>");
+                var payload = parser.data.slice(tag.payload_start, tag.end);
+                for (var i = 0; i < payload.length;) {
+                    var nalu_len = payload[i] << 24 | payload[i+1] << 16| payload[i+2] << 8 | payload[i+3];
+                    var lines = hexdump(payload.slice(i, i+4+nalu_len));
+                    var nalu_type = payload[i+4] & 0x1f;
+                    switch (nalu_type) {
+                        case 5:
+                            nalu_type+=":IDR";
+                            break;
+                        case 6:
+                            nalu_type+=":SEI";
+                            break;
+                        case 7:
+                            nalu_type+=":SPS";
+                            break;
+                        case 8:
+                            nalu_type+=":PPS";
+                            break;
+                    }
+                    $("#hexdump").append("NALU(type = " + nalu_type + ", size = " + nalu_len + ")");
+                    $("#hexdump").append("<pre>"+lines+"</pre>");
+                    i += nalu_len + 4;
+                }
+                // $("#hexdump").append("full tag");
+                // var lines = hexdump(parser.data.slice(tag.start, tag.end));
+                // $("#hexdump").append("<pre>"+lines+"</pre>");
+            } else {
+                var lines = hexdump(parser.data.slice(tag.start, tag.end));
+                $("#hexdump").append("<pre>"+lines+"</pre>");
+            }
         }
 
         const max_range = 1000;
@@ -222,6 +256,7 @@
                 this.cts = 0;
 
                 this.start = 0;
+                this.payload_start = 0;
                 this.end = 0;
             }
 
@@ -282,22 +317,28 @@
                     tag.dts = this.data[this.offset + 3] << 24 | this.data[this.offset] << 16 | this.data[this.offset + 1] << 8 | this.data[this.offset + 2];
                     tag.pts = tag.dts;
                     this.offset += 7; // include StreamID
+                    tag.payload_start = this.offset;
                     if (tag.type == 8) { // audio
                         tag.soundFormat = this.data[this.offset] >>> 4 & 0x0f;
                         tag.soundRate = this.data[this.offset] >>> 2 & 0x03;
                         tag.soundSize = this.data[this.offset] >>> 1 & 0x01;
                         tag.soundType = this.data[this.offset] & 0x01;
+                        tag.payload_start++;
                         if (tag.soundFormat == 10) {
                             tag.aacPacketType = this.data[this.offset + 1];
+                            tag.payload_start++;
                         }
                     } else if (tag.type == 9) { // video
                         tag.frameType = this.data[this.offset] >>> 4 & 0x0f;
                         tag.codecId = this.data[this.offset] & 0x0f;
+                        tag.payload_start++;
                         if (tag.codecId == 7) {
                             tag.avcPacketType = this.data[this.offset + 1];
+                            tag.payload_start++;
                             if (tag.avcPacketType == 1) {
                                 tag.cts = this.data[this.offset + 2] << 16 | this.data[this.offset + 3] << 8 | this.data[this.offset + 4];
                                 tag.pts += tag.cts;
+                                tag.payload_start+=3;
                             }
                         }
                     }
