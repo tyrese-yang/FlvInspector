@@ -36,6 +36,96 @@
             color: #fff;
         }
 
+        table {
+            margin: 1em 0;
+            border-collapse: collapse;
+            border: 0.1em solid #d6d6d6;
+        }
+
+        caption {
+            text-align: left;
+            font-style: italic;
+            padding: 0.25em 0.5em 0.5em 0.5em;
+        }
+
+        th,
+        td {
+            padding: 0.25em 0.5em 0.25em 1em;
+            vertical-align: text-top;
+            text-align: left;
+            text-indent: -0.5em;
+        }
+
+        th {
+            vertical-align: bottom;
+            background-color: #666;
+            color: #fff;
+        }
+
+        tr:nth-child(even) th[scope=row] {
+            background-color: #f2f2f2;
+        }
+
+        tr:nth-child(odd) th[scope=row] {
+            background-color: #fff;
+        }
+
+        tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        tr:nth-child(odd) {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        td:nth-of-type(2) {
+            font-style: italic;
+        }
+
+        th:nth-of-type(3),
+        td:nth-of-type(3) {
+            text-align: right;
+        }
+
+        /* Fixed Headers */
+
+        th {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        th[scope=row] {
+            position: -webkit-sticky;
+            position: sticky;
+            left: 0;
+            z-index: 1;
+        }
+
+        th[scope=row] {
+            vertical-align: top;
+            color: inherit;
+            background-color: inherit;
+            background: linear-gradient(90deg, transparent 0%, transparent calc(100% - .05em), #d6d6d6 calc(100% - .05em), #d6d6d6 100%);
+        }
+
+        table:nth-of-type(2) th:not([scope=row]):first-child {
+            left: 0;
+            z-index: 3;
+            background: linear-gradient(90deg, #666 0%, #666 calc(100% - .05em), #ccc calc(100% - .05em), #ccc 100%);
+        }
+
+        /* Strictly for making the scrolling happen. */
+
+        th[scope=row]+td {
+            min-width: 24em;
+        }
+
+        th[scope=row] {
+            min-width: 20em;
+        }
+
         .parse_button {
             box-shadow: inset 0px 1px 0px 0px #ffffff;
             background: linear-gradient(to bottom, #f9f9f9 5%, #e9e9e9 100%);
@@ -146,25 +236,25 @@
                 $("#hexdump").append("<pre>" + tag_header + "</pre>");
                 var payload = parser.data.slice(tag.payload_start, tag.end);
                 for (var i = 0; i < payload.length;) {
-                    var nalu_len = payload[i] << 24 | payload[i+1] << 16| payload[i+2] << 8 | payload[i+3];
-                    var lines = hexdump(payload.slice(i, i+4+nalu_len));
-                    var nalu_type = payload[i+4] & 0x1f;
+                    var nalu_len = payload[i] << 24 | payload[i + 1] << 16 | payload[i + 2] << 8 | payload[i + 3];
+                    var lines = hexdump(payload.slice(i, i + 4 + nalu_len));
+                    var nalu_type = payload[i + 4] & 0x1f;
                     switch (nalu_type) {
                         case 5:
-                            nalu_type+=":IDR";
+                            nalu_type += ":IDR";
                             break;
                         case 6:
-                            nalu_type+=":SEI";
+                            nalu_type += ":SEI";
                             break;
                         case 7:
-                            nalu_type+=":SPS";
+                            nalu_type += ":SPS";
                             break;
                         case 8:
-                            nalu_type+=":PPS";
+                            nalu_type += ":PPS";
                             break;
                     }
                     $("#hexdump").append("NALU(type = " + nalu_type + ", size = " + nalu_len + ")");
-                    $("#hexdump").append("<pre>"+lines+"</pre>");
+                    $("#hexdump").append("<pre>" + lines + "</pre>");
                     i += nalu_len + 4;
                 }
                 // $("#hexdump").append("full tag");
@@ -172,7 +262,7 @@
                 // $("#hexdump").append("<pre>"+lines+"</pre>");
             } else {
                 var lines = hexdump(parser.data.slice(tag.start, tag.end));
-                $("#hexdump").append("<pre>"+lines+"</pre>");
+                $("#hexdump").append("<pre>" + lines + "</pre>");
             }
         }
 
@@ -341,7 +431,7 @@
                                     tag.cts = -((~tag.cts & 0xFFFFFF) + 1);
                                 }
                                 tag.pts += tag.cts;
-                                tag.payload_start+=3;
+                                tag.payload_start += 3;
                             }
                         }
                     }
