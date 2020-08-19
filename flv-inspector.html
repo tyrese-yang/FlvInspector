@@ -36,6 +36,13 @@
             color: #fff;
         }
 
+        .tags_table tr.selected {
+            background-color: #66abec !important;
+            color:#fff;
+            vertical-align: middle;
+            padding: 1.5em;
+        }
+
         table {
             margin: 1em 0;
             border-collapse: collapse;
@@ -203,6 +210,9 @@
         }
 
         function showTagDetail(e) {
+            $('.selected').removeClass('selected');
+            $(this).addClass("selected");
+
             var tag = e.data;
             $("#hexdump").empty();
             $("#frame_info").empty();
