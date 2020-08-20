@@ -332,6 +332,7 @@
         }
 
         function flvParseDone() {
+            $("#frame_range").empty();
             for (var i = 0; i < parser.tags.length; i += max_range) {
                 var start = i + 1;
                 var end = i + max_range < parser.tags.length ? i + max_range : parser.tags.length;
@@ -408,6 +409,7 @@
             parseData() {
                 // 'F' 'L' 'V'
                 if (this.data[0] != 70 || this.data[1] != 76 || this.data[2] != 86) {
+                    $("#frame_range").empty();
                     alert("not FLV file");
                     return
                 }
@@ -415,6 +417,7 @@
                 this.haveAudio = this.data[4] >>> 2 & 0x01;
                 this.haveVideo = this.data[4] & 0x01;
                 if (this.data[8] != 9) {
+                    $("#frame_range").empty();
                     alert("parse failed")
                     return
                 }
@@ -475,11 +478,12 @@
             $("#tags_info").empty();
             $("#frame_info").empty();
             $("#hexdump").empty();
-            $("#frame_range").empty();
+            $("#frame_range").html("<option> Loading... </option>");
 
             var offset = 0;
             var files = document.getElementById("files").files;
             if (files.length == 0) {
+                $("#frame_range").empty();
                 alert("Please select a file");
                 return;
             }
