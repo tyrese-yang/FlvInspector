@@ -37,7 +37,7 @@ function readInt16BE(payload, start) {
 
 function parseMetadata(payload) {
     if (readUInt8(payload, 0) !== 2) {
-        console.log("Error");
+        console.log("not metadata");
         return
     }
 
@@ -59,7 +59,11 @@ function parseMetadata(payload) {
             parseOffset += 4;
             break;
         }
+        default: {
+            console.log("metadata obj type error, type: ", metadataObjType);
+        }
     }
+
     let params = new Map();
     while (true) {
         if (parseOffset >= payload.length - 2) break;
@@ -73,30 +77,23 @@ function parseMetadata(payload) {
         switch (valueType) {
             case 0: {
                 params[paramName] = readDoubleBE(payload, parseOffset);
-
                 parseOffset += 8;
                 break;
             }
             case 1: {
                 params[paramName] = Boolean(readUInt8(payload, parseOffset));
-
                 parseOffset += 1;
-
                 break;
             }
             case 2: {
                 let valueLength = readInt16BE(payload, parseOffset);
-
                 parseOffset += 2;
-
                 params[paramName] = payload.slice(parseOffset, parseOffset + valueLength);
-
                 parseOffset += valueLength;
-
                 break;
             }
             default: {
-                console.log("unknown_metadata_value_type: " + valueType);
+                console.log("unknown metadata value type: " + valueType);
             }
         }
     }
