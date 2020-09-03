@@ -51,7 +51,6 @@ function parseMetadata(payload) {
     parseOffset++;
     switch (metadataObjType) {
         case 3: {
-            parseOffset += 1;
             break;
         }
         case 8: {
