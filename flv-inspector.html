@@ -8,15 +8,15 @@
 <body>
     <div style="height: 35;">
         <input id="files" type="file" class="custom-file-input" onchange="fileLoad()" />
-        <select id="frame_range" onchange="rangeChange()" class="parse_buttons">
+        <select id="frame-range" onchange="rangeChange()">
             <option>Frame range</option>
         </select>
     </div>
-    <div class="tags_window">
-        <table class="tags_table" id="tags_info"></table>
+    <div class="tags-window">
+        <table class="tags-table" id="tags-info"></table>
     </div>
-    <div class="tag_detail">
-        <div id="frame_info"></div>
+    <div class="tag-detail">
+        <div id="frame-info"></div>
         <div id="hexdump"></div>
     </div>
 
@@ -25,28 +25,28 @@
 
     <script>
         function hexdump(data) {
-            var lines = [];
-            for (var i = 0; i < data.length; i += 16) {
-                var address = i.toString(16).padStart(8, '0');
-                var block = data.slice(i, i + 16);
-                var hexArray = [];
-                var asciiArray = [];
-                var padding = [];
+            let lines = [];
+            for (let i = 0; i < data.length; i += 16) {
+                let address = i.toString(16).padStart(8, '0');
+                let block = data.slice(i, i + 16);
+                let hexArray = [];
+                let asciiArray = [];
+                let padding = [];
 
-                for (var value of block) {
+                for (let value of block) {
                     hexArray.push(value.toString(16).padStart(2, '0'));
                     // printable ascii charactor exclude '>' and '<'
                     asciiArray.push(value >= 0x20 && value < 0x7f && value != 0x3c && value != 0x3e ? String.fromCharCode(value) : ".");
                 }
 
                 if (hexArray.length < 16) {
-                    var space = 16 - hexArray.length;
+                    let space = 16 - hexArray.length;
                     padding = ' '.repeat(space * 2 + space + (hexArray.length < 9 ? 1 : 0));
                 }
 
-                var hexString = hexArray.length > 8 ? hexArray.slice(0, 8).join(' ') + '  ' + hexArray.slice(8).join(' ') : hexArray.join(' ');
-                var asciiString = asciiArray.join('');
-                var line = `${address}  ${hexString}  ${padding}|${asciiString}|`
+                let hexString = hexArray.length > 8 ? hexArray.slice(0, 8).join(' ') + '  ' + hexArray.slice(8).join(' ') : hexArray.join(' ');
+                let asciiString = asciiArray.join('');
+                let line = `${address}  ${hexString}  ${padding}|${asciiString}|`
                 lines.push(line);
             }
             return lines.join('\n');
@@ -56,44 +56,44 @@
             $('.selected').removeClass('selected');
             $(this).addClass("selected");
 
-            var tag = e.data;
+            let tag = e.data;
             $("#hexdump").empty();
-            $("#frame_info").empty();
+            $("#frame-info").empty();
 
-            $("#frame_info").append("type: " + tag.type);
-            $("#frame_info").append("<br />dts: " + tag.dts);
-            $("#frame_info").append("<br />cts: " + tag.cts);
-            $("#frame_info").append("<br />pts: " + tag.pts);
-            $("#frame_info").append("<br />size: " + tag.size);
+            $("#frame-info").append("type: " + tag.type);
+            $("#frame-info").append("<br />dts: " + tag.dts);
+            $("#frame-info").append("<br />cts: " + tag.cts);
+            $("#frame-info").append("<br />pts: " + tag.pts);
+            $("#frame-info").append("<br />size: " + tag.size);
             if (tag.type == 8) {
-                $("#frame_info").append("<br />sound format: " + tag.soundFormat + "(" + tag.getCodecName() + ")");
-                $("#frame_info").append("<br />sound rate: " + tag.soundRate);
-                $("#frame_info").append("<br />sound size: " + tag.soundSize);
-                $("#frame_info").append("<br />sound type: " + tag.soundType);
+                $("#frame-info").append("<br />sound format: " + tag.soundFormat + "(" + tag.getCodecName() + ")");
+                $("#frame-info").append("<br />sound rate: " + tag.soundRate);
+                $("#frame-info").append("<br />sound size: " + tag.soundSize);
+                $("#frame-info").append("<br />sound type: " + tag.soundType);
                 if (tag.soundFormat == 10) {
-                    $("#frame_info").append("<br />aac packet type: " + tag.aacPacketType);
+                    $("#frame-info").append("<br />aac packet type: " + tag.aacPacketType);
                 }
             } else if (tag.type == 9) {
-                $("#frame_info").append("<br />frame type: " + tag.frameType);
-                $("#frame_info").append("<br />codec id: " + tag.codecId + "(" + tag.getCodecName()+")");
+                $("#frame-info").append("<br />frame type: " + tag.frameType);
+                $("#frame-info").append("<br />codec id: " + tag.codecId + "(" + tag.getCodecName()+")");
                 if (tag.codecId == 7) {
-                    $("#frame_info").append("<br />avc packet type: " + tag.avcPacketType);
+                    $("#frame-info").append("<br />avc packet type: " + tag.avcPacketType);
                 }
             }
 
-            var tag_header = hexdump(parser.data.slice(tag.start, tag.payload_start));
+            let tag_header = hexdump(parser.data.slice(tag.start, tag.payload_start));
             $("#hexdump").append("<br />");
             $("#hexdump").append("FLV tag header:");
             $("#hexdump").append("<pre>" + tag_header + "</pre>");
             $("#hexdump").append("FLV tag payload:");
-            var payload = parser.data.slice(tag.payload_start, tag.end);
+            let payload = parser.data.slice(tag.payload_start, tag.end);
             if (tag.codecId == 7 && tag.avcPacketType == 1) {
                 $("#hexdump").append("<br />");
                 // if tag contains h264 nalu data, split it
-                for (var i = 0; i < payload.length;) {
-                    var nalu_len = payload[i] << 24 | payload[i + 1] << 16 | payload[i + 2] << 8 | payload[i + 3];
-                    var lines = hexdump(payload.slice(i, i + 4 + nalu_len));
-                    var nalu_type = payload[i + 4] & 0x1f;
+                for (let i = 0; i < payload.length;) {
+                    let nalu_len = payload[i] << 24 | payload[i + 1] << 16 | payload[i + 2] << 8 | payload[i + 3];
+                    let lines = hexdump(payload.slice(i, i + 4 + nalu_len));
+                    let nalu_type = payload[i + 4] & 0x1f;
                     switch (nalu_type) {
                         case 5:
                             nalu_type += ":IDR";
@@ -116,10 +116,10 @@
                 const metadata = parseMetadata(String.fromCharCode.apply(null, payload));
                 console.log(JSON.stringify(metadata, null, 2));
                 $("#hexdump").append("<pre>" + JSON.stringify(metadata, null, 2) + "</pre>");
-                var lines = hexdump(payload);
+                let lines = hexdump(payload);
                 $("#hexdump").append("<pre>" + lines + "</pre>");
             } else {
-                var lines = hexdump(payload);
+                let lines = hexdump(payload);
                 $("#hexdump").append("<pre>" + lines + "</pre>");
             }
         }
@@ -128,54 +128,54 @@
         // show range [start : end)
         function showRange(start, end) {
             console.log(start, end);
-            $("#tags_info").empty();
-            $("#frame_info").empty();
+            $("#tags-info").empty();
+            $("#frame-info").empty();
             $("#hexdump").empty();
 
-            var tableHeader = $("<thead></thead>");
-            var tableRow = $("<tr></tr>");
+            let tableHeader = $("<thead></thead>");
+            let tableRow = $("<tr></tr>");
             tableRow.append($("<th>No.</th><th>Type</th><th>DTS</th><th>PTS</th><th>Size</th><th>FrameType</th>"));
             tableHeader.append(tableRow);
-            $("#tags_info").append(tableHeader);
-            for (var i = start; i < end; i++) {
-                var tag = parser.tags[i];
-                var frameType = ""
+            $("#tags-info").append(tableHeader);
+            for (let i = start; i < end; i++) {
+                let tag = parser.tags[i];
+                let frameType = ""
                 if (tag.type == 9 && tag.frameType == 1) {
-                    frameType = "key";
+                    frameType = "Key";
                     if (tag.avcPacketType == 0) {
-                        frameType += ", avc_header";
+                        frameType += ", Header";
                     }
                 } else if (tag.type == 8) {
                     if (tag.soundFormat == 10 && tag.aacPacketType == 0) {
-                        frameType = "aac_header";
+                        frameType = "Header";
                     }
                 }
-                var tableBody = $("<tbody></tbody>");
-                var tableRow = $("<tr></tr>");
-                var num = i + 1;
+                let tableBody = $("<tbody></tbody>");
+                let tableRow = $("<tr></tr>");
+                let num = i + 1;
                 tableRow.append("<td>" + num + "</td><td>" + tag.getTypeName() + "</td><td>" + tag.dts + "</td><td>" + tag.pts + "</td><td>" + tag.size + "</td><td>" + frameType + "</td>");
                 tableRow.click(tag, showTagDetail);
                 tableBody.append(tableRow);
-                $("#tags_info").append(tableBody);
+                $("#tags-info").append(tableBody);
             }
         }
 
         function rangeChange() {
-            var start = parseInt($("#frame_range option:selected").val());
-            var end = start + max_range;
+            let start = parseInt($("#frame-range option:selected").val());
+            let end = start + max_range;
             showRange(start, end);
         }
 
         function flvParseDone() {
-            $("#frame_range").empty();
-            for (var i = 0; i < parser.tags.length; i += max_range) {
-                var start = i + 1;
-                var end = i + max_range < parser.tags.length ? i + max_range : parser.tags.length;
-                $("#frame_range").append($("<option value=" + i + ">" + start + "~" + end + "</end>"));
+            $("#frame-range").empty();
+            for (let i = 0; i < parser.tags.length; i += max_range) {
+                let start = i + 1;
+                let end = i + max_range < parser.tags.length ? i + max_range : parser.tags.length;
+                $("#frame-range").append($("<option value=" + i + ">" + start + "~" + end + "</end>"));
             }
 
             //show first range
-            var first_range = parser.tags.length > max_range ? max_range : parser.tags.length;
+            let first_range = parser.tags.length > max_range ? max_range : parser.tags.length;
             showRange(0, first_range);
         }
     </script>
@@ -226,7 +226,7 @@
                 if (this.type == 9) {
                     switch (this.codecId) {
                         case 2:
-                            return "h263";
+                            return "H263";
                         case 3:
                             return "Screen Video";
                         case 4:
@@ -235,7 +235,7 @@
                         case 6:
                             return "Screen Video 2"
                         case 7:
-                            return "h264"
+                            return "H264"
                         default:
                             return "Unknown";
                     }
@@ -290,7 +290,7 @@
             parseData() {
                 // 'F' 'L' 'V'
                 if (this.data[0] != 70 || this.data[1] != 76 || this.data[2] != 86) {
-                    $("#frame_range").empty();
+                    $("#frame-range").empty();
                     alert("not FLV file");
                     return
                 }
@@ -298,14 +298,14 @@
                 this.haveAudio = this.data[4] >>> 2 & 0x01;
                 this.haveVideo = this.data[4] & 0x01;
                 if (this.data[8] != 9) {
-                    $("#frame_range").empty();
+                    $("#frame-range").empty();
                     alert("parse failed")
                     return
                 }
                 this.offset = 9;
                 while (this.offset < this.length) {
                     this.offset += 4; // previous tag size
-                    var tag = new FlvTag;
+                    let tag = new FlvTag;
                     tag.start = this.offset;
                     tag.type = this.data[this.offset] & 0x1f;
                     this.offset++;
@@ -356,22 +356,22 @@
         var parser;
 
         function parse(e) {
-            $("#tags_info").empty();
-            $("#frame_info").empty();
+            $("#tags-info").empty();
+            $("#frame-info").empty();
             $("#hexdump").empty();
-            $("#frame_range").html("<option> Loading... </option>");
+            $("#frame-range").html("<option> Loading... </option>");
 
-            var offset = 0;
-            var files = document.getElementById("files").files;
+            let offset = 0;
+            let files = document.getElementById("files").files;
             if (files.length == 0) {
-                $("#frame_range").empty();
+                $("#frame-range").empty();
                 alert("Please select a file");
                 return;
             }
-            var file = files[0];
-            var reader = new FileReader;
+            let file = files[0];
+            let reader = new FileReader;
             reader.onload = function (e) {
-                var buffer = reader.result;
+                let buffer = reader.result;
                 parser = new FlvParser;
                 parser.setData(new Uint8Array(buffer));
                 parser.parseDone = flvParseDone;

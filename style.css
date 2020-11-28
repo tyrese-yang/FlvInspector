@@ -1,4 +1,4 @@
-.tags_window {
+.tags-window {
     display: inline-block;
     width: 40%;
     height: 95%;
@@ -7,7 +7,7 @@
     vertical-align: top;
 }
 
-.tag_detail {
+.tag-detail {
     display: inline-block;
     width: 50%;
     height: 95%;
@@ -16,22 +16,22 @@
     vertical-align: top;
 }
 
-.tags_table {
+.tags-table {
     border-spacing: 0px;
     border-collapse: collapse;
 }
 
-.tags_table table,
+.tags-table table,
 td {
     border: 1px solid #333;
 }
 
-.tags_table thead {
+.tags-table thead {
     background-color: #333;
     color: #fff;
 }
 
-.tags_table tr.selected {
+.tags-table tr.selected {
     background-color: #66abec !important;
     color: #fff;
     vertical-align: middle;
