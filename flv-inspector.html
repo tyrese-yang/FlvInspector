@@ -6,8 +6,8 @@
 </head>
 
 <body>
-    <div style="height: 35;">
-        <input id="files" type="file" class="custom-file-input" onchange="fileLoad()" />
+    <div style="height: 35; display: flex;">
+        <input id="files" type="file" style="font-size: 16px;" onchange="fileLoad()" />
         <select id="frame-range" onchange="rangeChange()">
             <option>Frame range</option>
         </select>
@@ -201,13 +201,7 @@
             $("#frame-range").html("<option> Loading... </option>");
 
             let offset = 0;
-            let files = document.getElementById("files").files;
-            if (files.length == 0) {
-                $("#frame-range").empty();
-                alert("Please select a file");
-                return;
-            }
-            let file = files[0];
+            let file = document.getElementById("files").files[0];
             let reader = new FileReader;
             reader.onload = function (e) {
                 let buffer = reader.result;
@@ -220,6 +214,12 @@
         }
 
         function fileLoad(e) {
+            let files = document.getElementById("files").files;
+            if (files.length == 0) {
+                $("#frame-range").empty();
+                alert("File not found");
+                return;
+            }
             parse(e);
         }
     </script>
