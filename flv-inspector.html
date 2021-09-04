@@ -140,7 +140,7 @@
 
             let tableHeader = $("<thead></thead>");
             let tableRow = $("<tr></tr>");
-            tableRow.append($("<th>No.</th><th>Type</th><th>DTS</th><th>PTS</th><th>Size</th><th>FrameType</th>"));
+            tableRow.append($("<th>No.</th><th>Type</th><th>Codec</th><th>DTS</th><th>PTS</th><th>Size</th><th>FrameType</th>"));
             tableHeader.append(tableRow);
             $("#tags-info").append(tableHeader);
             for (let i = start; i < end; i++) {
@@ -159,7 +159,7 @@
                 let tableBody = $("<tbody></tbody>");
                 let tableRow = $("<tr></tr>");
                 let num = i + 1;
-                tableRow.append("<td>" + num + "</td><td>" + tag.getTypeName() + "</td><td>" + tag.dts + "</td><td>" + tag.pts + "</td><td>" + tag.size + "</td><td>" + frameType + "</td>");
+                tableRow.append("<td>" + num + "</td><td>" + tag.getTypeName() + "</td><td>" + tag.getCodecName() + "</td><td>" + tag.dts + "</td><td>" + tag.pts + "</td><td>" + tag.size + "</td><td>" + frameType + "</td>");
                 tableRow.click(tag, showTagDetail);
                 tableBody.append(tableRow);
                 $("#tags-info").append(tableBody);

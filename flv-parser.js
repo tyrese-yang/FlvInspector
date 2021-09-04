@@ -43,7 +43,7 @@ class FlvTag {
         if (this.type == 9) {
             switch (this.codecId) {
                 case 2:
-                    return "H263";
+                    return "H.263";
                 case 3:
                     return "Screen Video";
                 case 4:
@@ -52,7 +52,9 @@ class FlvTag {
                 case 6:
                     return "Screen Video 2"
                 case 7:
-                    return "H264"
+                    return "H.264"
+                case 12:
+                    return "H.265"
                 default:
                     return "Unknown";
             }
@@ -81,7 +83,7 @@ class FlvTag {
                     return "Unknown";
             }
         } else {
-            return "Unknown";
+            return "";
         }
     }
 
