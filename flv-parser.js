@@ -29,13 +29,13 @@ class FlvTag {
     getTypeName() {
         switch (this.type) {
             case 8:
-                return "audio";
+                return "Audio";
             case 9:
-                return "video";
+                return "Video";
             case 18:
-                return "script";
+                return "Script";
             default:
-                return "unknown";
+                return "Unknown";
         }
     }
 

@@ -58,33 +58,46 @@
             $(this).addClass("selected");
 
             let tag = e.data;
+            let payload = parser.data.slice(tag.payload_start, tag.end);
             $("#hexdump").empty();
             $("#frame-info").empty();
 
-            let tableBody = $("<tbody></tbody>");
-            tableBody.append($("<tr><td colspan=2>Info</td></tr>"));
-            tableBody.append($("<tr><td>Type</td> <td>" + tag.type + "(" + tag.getTypeName() + ")" + "</td></tr>"));
-            tableBody.append($("<tr><td>DTS</td> <td>" + tag.dts + "</td></tr>"));
-            tableBody.append($("<tr><td>CTS</td> <td>" + tag.cts + "</td></tr>"));
-            tableBody.append($("<tr><td>PTS</td> <td>" + tag.pts + "</td></tr>"));
-            tableBody.append($("<tr><td>Size</td> <td>" + tag.size + "</td></tr>"));
-            $("#frame-info").append(tableBody);
+            let tagInfo = $("<ul/>");
+            let tagHeader = $("<li><span class='caret'>Header</span></li>");
+            let headers = $("<ul/>");
+            headers.append("<li>TagType: " + tag.getTypeName() + "</li>");
+            headers.append("<li>DataSize: " + tag.size + "</li>");
+            headers.append("<li>Timestamp: " + tag.dts + "</li>");
+            headers.append("<li>StreamID: " + 0 + "</li>");
+            tagHeader.append(headers);
+            let tagBody = $("<li><span class='caret'>Body</span></li>");
+            tagInfo.append(tagHeader);
+            tagInfo.append(tagBody);
+            let bodys = $("<ul/>");
+
+            $("#frame-info").append(tagInfo);
 
             if (tag.type == 8) {
-                tableBody.append($("<tr><td>Sound Format</td> <td>" + tag.soundFormat + "(" + tag.getCodecName() + ")" + "</td></tr>"));
-                tableBody.append($("<tr><td>Sound Rate</td> <td>" + tag.soundRate + "(" + tag.getSoundRateText() + ")" + "</td></tr>"));
-                tableBody.append($("<tr><td>Sound Size</td> <td>" + tag.soundSize + "(" + tag.getSoundSizeText() + ")" + "</td></tr>"));
-                tableBody.append($("<tr><td>Sound Type</td> <td>" + tag.soundType + "(" + tag.getSoundTypeText() + ")" + "</td></tr>"));
+                headers.append("<li>SoundFormat: " + tag.getCodecName() + "</li>");
+                headers.append("<li>SoundRate: " + tag.getSoundRateText() + "</li>");
+                headers.append("<li>SoundSize: " + tag.getSoundSizeText() + "</li>");
+                headers.append("<li>SoundType: " + tag.getSoundTypeText() + "</li>");
                 if (tag.soundFormat == 10) {
-                    tableBody.append($("<tr><td>AAC Packet Type</td> <td>" + tag.aacPacketType +"</td></tr>"));
+                    headers.append("<li>AACPacketType: " + tag.aacPacketType + "</li>");
                 }
             } else if (tag.type == 9) {
-                tableBody.append($("<tr><td>Frame Type</td> <td>" + tag.frameType + "(" + tag.getFrameTypeText()+")" + "</td></tr>"));
-                tableBody.append($("<tr><td>Codec ID</td> <td>" + tag.codecId + "(" + tag.getCodecName()+")" + "</td></tr>"));
+                headers.append("<li>FrameType: " + tag.getFrameTypeText() + "</li>");
+                headers.append("<li>FrameType: " + tag.getCodecName() + "</li>");
 
                 if (tag.codecId == 7) {
-                    tableBody.append($("<tr><td>AVC Packet Type</td> <td>" + tag.avcPacketType + "</td></tr>"));
+                    headers.append("<li>AVCPacketType: " + tag.avcPacketType + "</li>");
                 }
+            } else if (tag.type == 18) {
+                const metadata = parseMetadata(String.fromCharCode.apply(null, payload));
+                for (let k in metadata) {
+                    bodys.append("<li>" + k + ": " + metadata[k] + "</li>");
+                }
+                tagBody.append(bodys);
             }
 
             let tag_header = hexdump(parser.data.slice(tag.start, tag.payload_start));
@@ -92,7 +105,6 @@
             $("#hexdump").append("FLV tag header:");
             $("#hexdump").append("<pre>" + tag_header + "</pre>");
             $("#hexdump").append("FLV tag payload:");
-            let payload = parser.data.slice(tag.payload_start, tag.end);
             if (tag.codecId == 7 && tag.avcPacketType == 1) {
                 $("#hexdump").append("<br />");
                 // if tag contains h264 nalu data, split it
@@ -118,16 +130,9 @@
                     $("#hexdump").append("<pre>" + lines + "</pre>");
                     i += nalu_len + 4;
                 }
-            } else if (tag.type == 18) {
-                const metadata = parseMetadata(String.fromCharCode.apply(null, payload));
-                console.log(JSON.stringify(metadata, null, 2));
-                $("#hexdump").append("<pre>" + JSON.stringify(metadata, null, 2) + "</pre>");
-                let lines = hexdump(payload);
-                $("#hexdump").append("<pre>" + lines + "</pre>");
-            } else {
-                let lines = hexdump(payload);
-                $("#hexdump").append("<pre>" + lines + "</pre>");
             }
+            let lines = hexdump(payload);
+            $("#hexdump").append("<pre>" + lines + "</pre>");
         }
 
         const max_range = 1000;
