@@ -27,6 +27,8 @@
     <script>
         function hexdump(data) {
             let lines = [];
+            let hexId = 0;
+            let stringId = 0;
             for (let i = 0; i < data.length; i += 16) {
                 let address = i.toString(16).padStart(8, '0');
                 let block = data.slice(i, i + 16);
@@ -45,12 +47,28 @@
                     padding = ' '.repeat(space * 2 + space + (hexArray.length < 9 ? 1 : 0));
                 }
 
-                let hexString = hexArray.length > 8 ? hexArray.slice(0, 8).join(' ') + '  ' + hexArray.slice(8).join(' ') : hexArray.join(' ');
-                let asciiString = asciiArray.join('');
-                let line = `${address}  ${hexString}  ${padding}|${asciiString}|`
+                //let hexString = hexArray.length > 8 ? hexArray.slice(0, 8).join(' ') + '  ' + hexArray.slice(8).join(' ') : hexArray.join(' ');
+                let hexString = '';
+                for (let i = 0; i < 16; i++) {
+                    if (i == 8) {
+                        hexString += ' ';
+                    }
+                    if (i < hexArray.length) {
+                        hexString += '<span hex-id="'+ hexId + '">' + hexArray[i] + '</span>';
+                        hexString += ' ';
+                        hexId++;
+                    }
+                }
+                // let asciiString = asciiArray.join('');
+                let asciiString = '';
+                for (let i = 0; i < asciiArray.length; i++) {
+                    asciiString += '<span string-id="'+ stringId + '">' + asciiArray[i] + '</span>';
+                    stringId++;
+                }
+                let line = `${address}  ${hexString}  ${padding}|${asciiString}|`;
                 lines.push(line);
             }
-            return lines.join('\n');
+            return '<pre id="hexdump-content">' + lines.join('\n') + '</pre>';
         }
 
         function showTagDetail(e) {
@@ -94,45 +112,41 @@
                 }
             } else if (tag.type == 18) {
                 const metadata = parseMetadata(String.fromCharCode.apply(null, payload));
+                let metadataWrap = $("<li><span class='caret'>Metadata</span></li>")
+                let metadatas = $("<ul/>")
                 for (let k in metadata) {
-                    bodys.append("<li>" + k + ": " + metadata[k] + "</li>");
+                    metadatas.append("<li>" + k + ": " + metadata[k] + "</li>");
                 }
-                tagBody.append(bodys);
+                metadataWrap.append(metadatas);
+                bodys.append(metadataWrap);
             }
 
-            let tag_header = hexdump(parser.data.slice(tag.start, tag.payload_start));
-            $("#hexdump").append("<br />");
-            $("#hexdump").append("FLV tag header:");
-            $("#hexdump").append("<pre>" + tag_header + "</pre>");
-            $("#hexdump").append("FLV tag payload:");
             if (tag.codecId == 7 && tag.avcPacketType == 1) {
-                $("#hexdump").append("<br />");
-                // if tag contains h264 nalu data, split it
                 for (let i = 0; i < payload.length;) {
                     let nalu_len = payload[i] << 24 | payload[i + 1] << 16 | payload[i + 2] << 8 | payload[i + 3];
-                    let lines = hexdump(payload.slice(i, i + 4 + nalu_len));
-                    let nalu_type = payload[i + 4] & 0x1f;
-                    switch (nalu_type) {
+                    let nalu_type;
+                    switch (payload[i + 4] & 0x1f) {
                         case 5:
-                            nalu_type += ":IDR";
+                            nalu_type = "IDR";
                             break;
                         case 6:
-                            nalu_type += ":SEI";
+                            nalu_type = "SEI";
                             break;
                         case 7:
-                            nalu_type += ":SPS";
+                            nalu_type = "SPS";
                             break;
                         case 8:
-                            nalu_type += ":PPS";
+                            nalu_type = "PPS";
                             break;
+                        default:
+                            nalu_type = payload[i + 4] & 0x1f;
                     }
-                    $("#hexdump").append("NALU(type = " + nalu_type + ", size = " + nalu_len + ")");
-                    $("#hexdump").append("<pre>" + lines + "</pre>");
+                    bodys.append("<li>NALU: " + nalu_type + "</li>");
                     i += nalu_len + 4;
                 }
             }
-            let lines = hexdump(payload);
-            $("#hexdump").append("<pre>" + lines + "</pre>");
+            tagBody.append(bodys);
+            $("#hexdump").append(hexdump(parser.data.slice(tag.start, tag.end)));
         }
 
         const max_range = 1000;
