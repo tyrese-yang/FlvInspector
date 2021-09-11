@@ -81,14 +81,15 @@
             $("#frame-info").empty();
 
             let tagInfo = $("<ul/>");
-            let tagHeader = $("<li><span class='caret'>Header</span></li>");
+            let tagHeader = $("<li start-id='0' end-id='10'><span class='caret'>Header</span></li>");
             let headers = $("<ul/>");
-            headers.append("<li>TagType: " + tag.getTypeName() + "</li>");
-            headers.append("<li>DataSize: " + tag.size + "</li>");
-            headers.append("<li>Timestamp: " + tag.dts + "</li>");
-            headers.append("<li>StreamID: " + 0 + "</li>");
+            headers.append("<li start-id='0' end-id='0'>TagType: " + tag.getTypeName() + "</li>");
+            headers.append("<li start-id='1' end-id='3'>DataSize: " + tag.size + "</li>");
+            headers.append("<li start-id='4' end-id='7'>Timestamp: " + tag.dts + "</li>");
+            headers.append("<li start-id='8' end-id='10'>StreamID: " + 0 + "</li>");
             tagHeader.append(headers);
-            let tagBody = $("<li><span class='caret'>Body</span></li>");
+            let hexEndId = tag.size + 11;
+            let tagBody = $("<li'><span class='caret'>Body</span></li>");
             tagInfo.append(tagHeader);
             tagInfo.append(tagBody);
             let bodys = $("<ul/>");
@@ -96,19 +97,19 @@
             $("#frame-info").append(tagInfo);
 
             if (tag.type == 8) {
-                headers.append("<li>SoundFormat: " + tag.getCodecName() + "</li>");
-                headers.append("<li>SoundRate: " + tag.getSoundRateText() + "</li>");
-                headers.append("<li>SoundSize: " + tag.getSoundSizeText() + "</li>");
-                headers.append("<li>SoundType: " + tag.getSoundTypeText() + "</li>");
+                headers.append("<li start-id='11' end-id='11'>SoundFormat: " + tag.getCodecName() + "</li>");
+                headers.append("<li start-id='11' end-id='11'>SoundRate: " + tag.getSoundRateText() + "</li>");
+                headers.append("<li start-id='11' end-id='11'>SoundSize: " + tag.getSoundSizeText() + "</li>");
+                headers.append("<li start-id='11' end-id='11'>SoundType: " + tag.getSoundTypeText() + "</li>");
                 if (tag.soundFormat == 10) {
-                    headers.append("<li>AACPacketType: " + tag.aacPacketType + "</li>");
+                    headers.append("<li start-id='12' end-id='12'>AACPacketType: " + tag.aacPacketType + "</li>");
                 }
             } else if (tag.type == 9) {
-                headers.append("<li>FrameType: " + tag.getFrameTypeText() + "</li>");
-                headers.append("<li>FrameType: " + tag.getCodecName() + "</li>");
+                headers.append("<li start-id='11' end-id='11'>FrameType: " + tag.getFrameTypeText() + "</li>");
+                headers.append("<li start-id='11' end-id='11'>FrameType: " + tag.getCodecName() + "</li>");
 
                 if (tag.codecId == 7) {
-                    headers.append("<li>AVCPacketType: " + tag.avcPacketType + "</li>");
+                    headers.append("<li start-id='11' end-id='11'>AVCPacketType: " + tag.avcPacketType + "</li>");
                 }
             } else if (tag.type == 18) {
                 const metadata = parseMetadata(String.fromCharCode.apply(null, payload));
@@ -241,6 +242,22 @@
             }
             parse(e);
         }
+    </script>
+
+    <script>
+        $(function() {
+            $("#frame-info").on("click", "[start-id]", function(e) {
+                $("[hex-id]").removeClass("hex-selected");
+                $("[start-id]").removeClass("selected");
+                let start = parseInt($(this).attr("start-id"));
+                let end = parseInt($(this).attr("end-id"));
+                $(this).addClass("selected");
+                for (let i = start; i <= end; i++) {
+                    $("[hex-id=" + i + "]").addClass("hex-selected");
+                }
+                e.stopPropagation();
+            })
+        })
     </script>
 </body>
 

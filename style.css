@@ -149,3 +149,13 @@ ul {
     -webkit-transform: rotate(90deg); /* Safari */
     transform: rotate(90deg);  
 }
+
+li.selected {
+    background-color: #66abec !important;
+    color: #fff;
+}
+
+.hex-selected {
+    background-color: #66abec !important;
+    color: #fff;
+}
