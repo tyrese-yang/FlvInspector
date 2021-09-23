@@ -25,10 +25,10 @@
     <script src="flv-parser.js" type="text/javascript"></script>
 
     <script>
+        const maxHexId = 100;
         function hexdump(data) {
             let lines = [];
             let hexId = 0;
-            let stringId = 0;
             for (let i = 0; i < data.length; i += 16) {
                 let address = i.toString(16).padStart(8, '0');
                 let block = data.slice(i, i + 16);
@@ -54,16 +54,20 @@
                         hexString += ' ';
                     }
                     if (i < hexArray.length) {
-                        hexString += '<span hex-id="'+ hexId + '">' + hexArray[i] + '</span>';
+                        if (hexId < maxHexId) {
+                            hexString += '<span hex-id="'+ hexId + '">' + hexArray[i] + '</span>';
+                            hexId++;
+                        } else {
+                            hexString += hexArray[i];
+                        }
+
                         hexString += ' ';
-                        hexId++;
                     }
                 }
                 // let asciiString = asciiArray.join('');
                 let asciiString = '';
                 for (let i = 0; i < asciiArray.length; i++) {
-                    asciiString += '<span string-id="'+ stringId + '">' + asciiArray[i] + '</span>';
-                    stringId++;
+                    asciiString += asciiArray[i];
                 }
                 let line = `${address}  ${hexString}  ${padding}|${asciiString}|`;
                 lines.push(line);
@@ -77,8 +81,10 @@
 
             let tag = e.data;
             let payload = parser.data.slice(tag.payload_start, tag.end);
-            $("#hexdump").empty();
-            $("#frame-info").empty();
+            //$("#hexdump").empty();
+            //$("#frame-info").empty();
+            document.getElementById("hexdump").innerHTML = "";
+            document.getElementById("frame-info").innerHTML = ""
 
             let tagInfo = $("<ul/>");
             let tagHeader = $("<li start-id='0' end-id='10'><span class='caret'>Header</span></li>");
@@ -154,9 +160,12 @@
         // show range [start : end)
         function showRange(start, end) {
             console.log(start, end);
-            $("#tags-info").empty();
-            $("#frame-info").empty();
-            $("#hexdump").empty();
+            //$("#tags-info").empty();
+            //$("#frame-info").empty();
+            //$("#hexdump").empty();
+            document.getElementById("frame-info").innerHTML = "";
+            document.getElementById("tags-info").innerHTML = "";
+            document.getElementById("hexdump").innerHTML = "";
 
             let tableHeader = $("<thead></thead>");
             let tableRow = $("<tr></tr>");
