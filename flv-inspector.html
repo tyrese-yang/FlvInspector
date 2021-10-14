@@ -115,7 +115,8 @@
                 headers.append("<li start-id='11' end-id='11'>FrameType: " + tag.getCodecName() + "</li>");
 
                 if (tag.codecId == 7) {
-                    headers.append("<li start-id='11' end-id='11'>AVCPacketType: " + tag.avcPacketType + "</li>");
+                    headers.append("<li start-id='12' end-id='12'>AVCPacketType: " + tag.avcPacketType + "</li>");
+                    headers.append("<li start-id='13' end-id='15'>CTS: " + tag.cts+ "</li>");
                 }
             } else if (tag.type == 18) {
                 const metadata = parseMetadata(String.fromCharCode.apply(null, payload));
