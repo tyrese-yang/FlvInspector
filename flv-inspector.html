@@ -86,38 +86,41 @@
             document.getElementById("hexdump").innerHTML = "";
             document.getElementById("frame-info").innerHTML = ""
 
-            let tagInfo = $("<ul/>");
-            let tagHeader = $("<li start-id='0' end-id='10'><span class='caret'>Header</span></li>");
             let headers = $("<ul/>");
             headers.append("<li start-id='0' end-id='0'>TagType: " + tag.getTypeName() + "</li>");
             headers.append("<li start-id='1' end-id='3'>DataSize: " + tag.size + "</li>");
             headers.append("<li start-id='4' end-id='7'>Timestamp: " + tag.dts + "</li>");
             headers.append("<li start-id='8' end-id='10'>StreamID: " + 0 + "</li>");
-            tagHeader.append(headers);
             let hexEndId = tag.size + 11;
-            let tagBody = $("<li'><span class='caret'>Body</span></li>");
-            tagInfo.append(tagHeader);
-            tagInfo.append(tagBody);
             let bodys = $("<ul/>");
-
-            $("#frame-info").append(tagInfo);
-
+            let endId = 10;
             if (tag.type == 8) {
-                headers.append("<li start-id='11' end-id='11'>SoundFormat: " + tag.getCodecName() + "</li>");
-                headers.append("<li start-id='11' end-id='11'>SoundRate: " + tag.getSoundRateText() + "</li>");
-                headers.append("<li start-id='11' end-id='11'>SoundSize: " + tag.getSoundSizeText() + "</li>");
-                headers.append("<li start-id='11' end-id='11'>SoundType: " + tag.getSoundTypeText() + "</li>");
+                let audioHdrs = $("<ul/>");
+                audioHdrs.append("<li start-id='11' end-id='11'>SoundFormat: " + tag.getCodecName() + "</li>");
+                audioHdrs.append("<li start-id='11' end-id='11'>SoundRate: " + tag.getSoundRateText() + "</li>");
+                audioHdrs.append("<li start-id='11' end-id='11'>SoundSize: " + tag.getSoundSizeText() + "</li>");
+                audioHdrs.append("<li start-id='11' end-id='11'>SoundType: " + tag.getSoundTypeText() + "</li>");
+                endId = 11;
                 if (tag.soundFormat == 10) {
-                    headers.append("<li start-id='12' end-id='12'>AACPacketType: " + tag.aacPacketType + "</li>");
+                    audioHdrs.append("<li start-id='12' end-id='12'>AACPacketType: " + tag.aacPacketType + "</li>");
+                    endId = 12;
                 }
+                let audioHeader = $("<li start-id='11' end-id='" + endId + "'><span class='caret'>AudioTagHeader</span></li>");
+                audioHeader.append(audioHdrs);
+                headers.append(audioHeader);
             } else if (tag.type == 9) {
-                headers.append("<li start-id='11' end-id='11'>FrameType: " + tag.getFrameTypeText() + "</li>");
-                headers.append("<li start-id='11' end-id='11'>FrameType: " + tag.getCodecName() + "</li>");
-
+                let videoHdrs = $("<ul/>");
+                videoHdrs.append("<li start-id='11' end-id='11'>FrameType: " + tag.getFrameTypeText() + "</li>");
+                videoHdrs.append("<li start-id='11' end-id='11'>FrameType: " + tag.getCodecName() + "</li>");
+                endId = 11;
                 if (tag.codecId == 7) {
-                    headers.append("<li start-id='12' end-id='12'>AVCPacketType: " + tag.avcPacketType + "</li>");
-                    headers.append("<li start-id='13' end-id='15'>CTS: " + tag.cts+ "</li>");
+                    videoHdrs.append("<li start-id='12' end-id='12'>AVCPacketType: " + tag.avcPacketType + "</li>");
+                    videoHdrs.append("<li start-id='13' end-id='15'>CTS: " + tag.cts+ "</li>");
+                    endId = 15;
                 }
+                let videoHeader = $("<li start-id='11' end-id='" + endId + "'><span class='caret'>VideoTagHeader</span></li>");
+                videoHeader.append(videoHdrs);
+                headers.append(videoHeader);
             } else if (tag.type == 18) {
                 const metadata = parseMetadata(String.fromCharCode.apply(null, payload));
                 let metadataWrap = $("<li><span class='caret'>Metadata</span></li>")
@@ -129,6 +132,14 @@
                 bodys.append(metadataWrap);
             }
 
+            let tagHeader = $("<li start-id='0' end-id='" + endId + "'><span class='caret'>TagHeader</span></li>");
+            tagHeader.append(headers);
+            let tagInfo = $("<ul/>");
+            let tagBody = $("<li'><span class='caret'>Data</span></li>");
+            tagInfo.append(tagHeader);
+            tagInfo.append(tagBody);
+
+            $("#frame-info").append(tagInfo);
             if (tag.codecId == 7 && tag.avcPacketType == 1) {
                 for (let i = 0; i < payload.length;) {
                     let nalu_len = payload[i] << 24 | payload[i + 1] << 16 | payload[i + 2] << 8 | payload[i + 3];
