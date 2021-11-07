@@ -75,16 +75,33 @@
             return '<pre id="hexdump-content">' + lines.join('\n') + '</pre>';
         }
 
+        function showFlvHeader(e) {
+            console.log("show FLV header");
+            $('.selected').removeClass('selected');
+            $(this).addClass("selected");
+            document.getElementById("hexdump").innerHTML = "";
+            document.getElementById("frame-info").innerHTML = ""
+            let headers = $("<ul/>");
+            headers.append("<li start-id='3' end-id='3'>Version: " + parser.version + "</li>");
+            headers.append("<li start-id='4' end-id='4'>HaveVideo: " + parser.haveVideo + "</li>");
+            headers.append("<li start-id='4' end-id='4'>HaveAudio: " + parser.haveAudio + "</li>");
+            headers.append("<li start-id='5' end-id='8'>DataOffset: " + parser.dataOffset + "</li>");
+            let tagHeader = $("<li start-id='0' end-id='" + 8 + "'><span class='caret'>FLVHeader</span></li>");
+            tagHeader.append(headers);
+            let tagInfo = $("<ul/>");
+            tagInfo.append(tagHeader);
+            $("#frame-info").append(tagInfo);
+            $("#hexdump").append(hexdump(parser.data.slice(0, 9)));
+        }
+
         function showTagDetail(e) {
             $('.selected').removeClass('selected');
             $(this).addClass("selected");
+            document.getElementById("hexdump").innerHTML = "";
+            document.getElementById("frame-info").innerHTML = ""
 
             let tag = e.data;
             let payload = parser.data.slice(tag.payload_start, tag.end);
-            //$("#hexdump").empty();
-            //$("#frame-info").empty();
-            document.getElementById("hexdump").innerHTML = "";
-            document.getElementById("frame-info").innerHTML = ""
 
             let headers = $("<ul/>");
             headers.append("<li start-id='0' end-id='0'>TagType: " + tag.getTypeName() + "</li>");
@@ -172,9 +189,6 @@
         // show range [start : end)
         function showRange(start, end) {
             console.log(start, end);
-            //$("#tags-info").empty();
-            //$("#frame-info").empty();
-            //$("#hexdump").empty();
             document.getElementById("frame-info").innerHTML = "";
             document.getElementById("tags-info").innerHTML = "";
             document.getElementById("hexdump").innerHTML = "";
@@ -184,6 +198,14 @@
             tableRow.append($("<th>No.</th><th>Type</th><th>Codec</th><th>DTS</th><th>PTS</th><th>Size</th><th>FrameType</th>"));
             tableHeader.append(tableRow);
             $("#tags-info").append(tableHeader);
+            if (start == 0) {
+                let tableBody = $("<tbody></tbody>");
+                let tableRow = $("<tr></tr>");
+                tableRow.append("<td>0</td><td>-</td><td>-</td><td>-</td><td>-</td><td>9</td><td>FLV Header</td>");
+                tableRow.click(parser, showFlvHeader);
+                tableBody.append(tableRow);
+                $("#tags-info").append(tableBody);
+            }
             for (let i = start; i < end; i++) {
                 let tag = parser.tags[i];
                 let frameType = ""

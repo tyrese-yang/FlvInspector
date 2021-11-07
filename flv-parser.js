@@ -165,6 +165,7 @@ class FlvParser {
         this.version = this.data[3];
         this.haveAudio = this.data[4] >>> 2 & 0x01;
         this.haveVideo = this.data[4] & 0x01;
+        this.dataOffset = this.data[5] << 24 | this.data[6] << 16 | this.data[7] << 8 | this.data[8]
         if (this.data[8] != 9) {
             this.errorMsg = "parse failed"
             this.parseDone();
