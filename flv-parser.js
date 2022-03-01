@@ -198,7 +198,7 @@ class FlvParser {
                 tag.frameType = this.data[this.offset] >>> 4 & 0x0f;
                 tag.codecId = this.data[this.offset] & 0x0f;
                 tag.payload_start++;
-                if (tag.codecId == 7) {
+                if (tag.codecId == 7 || tag.codecId == 12) {
                     tag.avcPacketType = this.data[this.offset + 1];
                     tag.payload_start++;
                     if (tag.avcPacketType == 1) {
