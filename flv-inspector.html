@@ -6,18 +6,27 @@
 </head>
 
 <body>
-    <div style="height: 35; display: flex;">
-        <input id="files" type="file" style="font-size: 16px;" onchange="fileLoad()" />
-        <select id="frame-range" onchange="rangeChange()">
-            <option>Frame range</option>
-        </select>
-    </div>
-    <div class="tags-window">
-        <table class="tags-table" id="tags-info"></table>
-    </div>
-    <div class="tag-detail">
-        <div id="frame-info"></div>
-        <div id="hexdump"></div>
+    <div class="wrapper">
+        <div class="navigate">
+            <div class="file-input">
+                <input type="file" id="file" class="file" onchange="fileLoad()">
+                <label for="file">File</label>
+            </div>
+        </div>
+
+        <div class="tags-window">
+            <select class="frame-select" id="frame-range" onchange="rangeChange()">
+                <option>Frame range</option>
+            </select>
+            <div class="tags-table">
+                <table  id="tags-info"></table>
+            </div>
+        </div>
+
+        <div class="tag-detail">
+            <div class="frame-info" id="frame-info"></div>
+            <div class="hexdump" id="hexdump"></div>
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
@@ -127,8 +136,8 @@
                 headers.append(audioHeader);
             } else if (tag.type == 9) {
                 let videoHdrs = $("<ul/>");
-                videoHdrs.append("<li start-id='11' end-id='11'>FrameType: " + tag.getFrameTypeText() + "</li>");
-                videoHdrs.append("<li start-id='11' end-id='11'>FrameType: " + tag.getCodecName() + "</li>");
+                videoHdrs.append("<li start-id='11' end-id='11'>Frame: " + tag.getFrameTypeText() + "</li>");
+                videoHdrs.append("<li start-id='11' end-id='11'>Codec: " + tag.getCodecName() + "</li>");
                 endId = 11;
                 if (tag.codecId == 7) {
                     videoHdrs.append("<li start-id='12' end-id='12'>AVCPacketType: " + tag.avcPacketType + "</li>");
@@ -157,31 +166,65 @@
             tagInfo.append(tagBody);
 
             $("#frame-info").append(tagInfo);
-            if (tag.codecId == 7 && tag.avcPacketType == 1) {
-                for (let i = 0; i < payload.length;) {
-                    let nalu_len = payload[i] << 24 | payload[i + 1] << 16 | payload[i + 2] << 8 | payload[i + 3];
-                    let nalu_type;
-                    switch (payload[i + 4] & 0x1f) {
-                        case 5:
-                            nalu_type = "IDR";
-                            break;
-                        case 6:
-                            nalu_type = "SEI";
-                            break;
-                        case 7:
-                            nalu_type = "SPS";
-                            break;
-                        case 8:
-                            nalu_type = "PPS";
-                            break;
-                        default:
-                            nalu_type = payload[i + 4] & 0x1f;
+            if (tag.codecId == 7) {
+                if (tag.avcPacketType == 0) {
+                    // Parse AVCDecoderConfigurationRecord
+                    let configurationVersion = payload[0];
+                    let AVCProfileIndication = payload[1];
+                    let profile_compatibility = payload[2];
+                    let AVCLevelIndication = payload[3];
+                    let lengthSizeMinusOne = payload[4] & 0x02;
+                    let numOfSequenceParameterSets = payload[5] & 0x1f;
+                    bodys.append("<li start-id='16' end-id='16'>configurationVersion: " + configurationVersion + "</li>");
+                    bodys.append("<li start-id='17' end-id='17'>AVCProfileIndication: " + AVCProfileIndication + "</li>");
+                    bodys.append("<li start-id='18' end-id='18'>profile_compatibility: " + profile_compatibility + "</li>");
+                    bodys.append("<li start-id='19' end-id='19'>AVCLevelIndication: " + AVCLevelIndication + "</li>");
+                    bodys.append("<li start-id='20' end-id='20'>lengthSizeMinusOne: " + lengthSizeMinusOne + "</li>");
+                    bodys.append("<li start-id='21' end-id='21'>numOfSequenceParameterSets: " + numOfSequenceParameterSets + "</li>");
+                    let pos = 6;
+                    for (let i = 0; i < numOfSequenceParameterSets; i++) {
+                        let sequenceParameterSetLength = payload[pos] << 8 | payload[pos + 1];
+                        bodys.append("<li start-id=" + (16 + pos) + " end-id=" + (16 + pos + 1) + ">sequenceParameterSetLength: " + sequenceParameterSetLength + "</li>");
+                        bodys.append("<li start-id=" + (16 + pos + 2) + " end-id=" + (16 + pos + 1 + sequenceParameterSetLength) + ">SPS</li>");
+                        pos += 2 + sequenceParameterSetLength;
+
                     }
-                    bodys.append("<li>NALU: " + nalu_type + "</li>");
-                    i += nalu_len + 4;
+                    let numOfPictureParameterSets = payload[pos];
+                    bodys.append("<li start-id=" + (16 + pos) + " end-id=" + (16 + pos) + ">numOfPictureParameterSets: " + numOfPictureParameterSets + "</li>");
+                    pos++;
+                    for (let i = 0; i < numOfPictureParameterSets; i++) {
+                        let pictureParameterSetLength = payload[pos] << 8 | payload[pos + 1];
+                        bodys.append("<li start-id=" + (16 + pos) + " end-id=" + (16 + pos + 1) + ">pictureParameterSetLength: " + pictureParameterSetLength + "</li>");
+                        bodys.append("<li start-id=" + (16 + pos + 2) + " end-id=" + (16 + pos + 1 + pictureParameterSetLength) + ">PPS</li>");
+                        pos += 2 + pictureParameterSetLength;
+                    }
+                } else if (tag.avcPacketType == 1) {
+                    for (let i = 0; i < payload.length;) {
+                        let nalu_len = payload[i] << 24 | payload[i + 1] << 16 | payload[i + 2] << 8 | payload[i + 3];
+                        let nalu_type;
+                        switch (payload[i + 4] & 0x1f) {
+                            case 5:
+                                nalu_type = "IDR";
+                                break;
+                            case 6:
+                                nalu_type = "SEI";
+                                break;
+                            case 7:
+                                nalu_type = "SPS";
+                                break;
+                            case 8:
+                                nalu_type = "PPS";
+                                break;
+                            default:
+                                nalu_type = payload[i + 4] & 0x1f;
+                        }
+                        bodys.append("<li>NALU: " + nalu_type + "</li>");
+                        i += nalu_len + 4;
+                    }
                 }
             }
             tagBody.append(bodys);
+
             $("#hexdump").append(hexdump(parser.data.slice(tag.start, tag.end)));
         }
 
@@ -195,7 +238,7 @@
 
             let tableHeader = $("<thead></thead>");
             let tableRow = $("<tr></tr>");
-            tableRow.append($("<th>No.</th><th>Type</th><th>Codec</th><th>DTS</th><th>PTS</th><th>Size</th><th>FrameType</th>"));
+            tableRow.append($("<th>No.</th><th>Type</th><th>Codec</th><th>DTS</th><th>PTS</th><th>Size</th><th>Frame</th>"));
             tableHeader.append(tableRow);
             $("#tags-info").append(tableHeader);
             if (start == 0) {
@@ -245,7 +288,7 @@
             for (let i = 0; i < parser.tags.length; i += max_range) {
                 let start = i + 1;
                 let end = i + max_range < parser.tags.length ? i + max_range : parser.tags.length;
-                $("#frame-range").append($("<option value=" + i + ">" + start + "~" + end + "</end>"));
+                $("#frame-range").append($("<option value=" + i + "> No. " + start + "~" + end + "</end>"));
             }
 
             //show first range
@@ -257,14 +300,13 @@
     <script>
         var parser;
 
-        function parse(e) {
+        function parse(file) {
             $("#tags-info").empty();
             $("#frame-info").empty();
             $("#hexdump").empty();
             $("#frame-range").html("<option> Loading... </option>");
 
             let offset = 0;
-            let file = document.getElementById("files").files[0];
             let reader = new FileReader;
             reader.onload = function (e) {
                 let buffer = reader.result;
@@ -277,13 +319,13 @@
         }
 
         function fileLoad(e) {
-            let files = document.getElementById("files").files;
+            let files = document.getElementById("file").files;
             if (files.length == 0) {
                 $("#frame-range").empty();
                 alert("File not found");
                 return;
             }
-            parse(e);
+            parse(files[0]);
         }
     </script>
 

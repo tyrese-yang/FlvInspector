@@ -1,24 +1,71 @@
-.tags-window {
-    display: inline-block;
-    width: 40%;
-    height: 95%;
-    overflow: scroll;
-    border: 1px solid black;
-    vertical-align: top;
+body {
+    background-color: #454545;
 }
 
-.tag-detail {
-    display: inline-block;
-    width: 50%;
-    height: 95%;
-    overflow: scroll;
-    border: 1px solid black;
-    vertical-align: top;
+.wrapper {
+    display: flex;
+    position:absolute;
+    top:0px;
+    right:0px;
+    bottom:0px;
+    left:0px;
+}
+
+.navigate {
+    width: 80px;
+    height: 100%;
+}
+
+/* Load file button */
+.file {
+    opacity: 0;
+    width: 0.1px;
+    height: 0.1px;
+    position: absolute;
+}
+
+.file-input label {
+    width: 80px;
+    height: 80px;
+    background-color: #303030;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform .2s ease-out;
+}
+
+input:hover + label {
+    background-color: #606060;
+}
+
+/* Frame table */
+.tags-window {
+    display: block;
+    width: 40%;
+    height: 100%;
+    background-color: #505050;
+}
+
+.frame-select {
+    background-color: #404040;
+    border: none;
+    height: 40;
+    width: 100%;
+    color: #E5E7E9;
+    text-align: center;
+    text-decoration: none;
+    display: flex;
+    font-size: 16px;
 }
 
 .tags-table {
     border-spacing: 0px;
+    height: 95%;
     border-collapse: collapse;
+    overflow-y: scroll;
 }
 
 .tags-table table,
@@ -32,22 +79,16 @@ td {
 }
 
 .tags-table tr.selected {
-    background-color: #66abec !important;
+    background-color: #808080 !important;
     color: #fff;
     vertical-align: middle;
     padding: 1.5em;
 }
 
 table {
-    margin: 1em 0;
+    width: 100%;
     border-collapse: collapse;
     border: 0.1em solid #d6d6d6;
-}
-
-caption {
-    text-align: left;
-    font-style: italic;
-    padding: 0.25em 0.5em 0.5em 0.5em;
 }
 
 th,
@@ -56,12 +97,11 @@ td {
     vertical-align: text-top;
     text-align: left;
     text-indent: -0.5em;
+    color: #fff;
 }
 
 th {
-    vertical-align: bottom;
     background-color: #666;
-    color: #fff;
 }
 
 tr:nth-child(even) th[scope=row] {
@@ -70,18 +110,6 @@ tr:nth-child(even) th[scope=row] {
 
 tr:nth-child(odd) th[scope=row] {
     background-color: #fff;
-}
-
-tr:nth-child(even) {
-    background-color: rgba(0, 0, 0, 0.05);
-}
-
-tr:nth-child(odd) {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-td:nth-of-type(2) {
-    font-style: italic;
 }
 
 /* Fixed Headers */
@@ -113,6 +141,41 @@ table:nth-of-type(2) th:not([scope=row]):first-child {
     background: linear-gradient(90deg, #666 0%, #666 calc(100% - .05em), #ccc calc(100% - .05em), #ccc 100%);
 }
 
+/* Frame Detail */
+.tag-detail {
+    display: block;
+    width: 55%;
+    height: 100%;
+}
+
+li.selected {
+    background-color: #808080 !important;
+    color: #fff;
+}
+
+.frame-info {
+    height: 40%;
+    overflow-y: scroll;
+    background-color: #303030;
+}
+
+.frame-info li {
+    width: 70%;
+}
+
+.hexdump {
+    height: 60%;
+    overflow-y: scroll;
+    background-color: #202020;
+    color: #fff;
+    padding-left: 30px;
+}
+
+.hex-selected {
+    background-color: #808080 !important;
+    color: #fff;
+}
+
 /* Strictly for making the scrolling happen. */
 
 th[scope=row]+td {
@@ -127,6 +190,7 @@ th[scope=row] {
 /* Tree view */
 ul {
     list-style-type: none;
+    color: #fff;
 }
 
 .caret {
@@ -135,11 +199,11 @@ ul {
     -moz-user-select: none; /* Firefox 2+ */
     -ms-user-select: none; /* IE 10+ */
     user-select: none;
+    color: #fff;
 }
 
 .caret::before {
     content: "\25B6";
-    color: black;
     display: inline-block;
     margin-right: 6px;
 }
@@ -148,14 +212,4 @@ ul {
     -ms-transform: rotate(90deg); /* IE 9 */
     -webkit-transform: rotate(90deg); /* Safari */
     transform: rotate(90deg);  
-}
-
-li.selected {
-    background-color: #66abec !important;
-    color: #fff;
-}
-
-.hex-selected {
-    background-color: #66abec !important;
-    color: #fff;
 }

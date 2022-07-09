@@ -201,14 +201,12 @@ class FlvParser {
                 if (tag.codecId == 7 || tag.codecId == 12) {
                     tag.avcPacketType = this.data[this.offset + 1];
                     tag.payload_start++;
-                    if (tag.avcPacketType == 1) {
-                        tag.cts = this.data[this.offset + 2] << 16 | this.data[this.offset + 3] << 8 | this.data[this.offset + 4];
-                        if (this.data[this.offset + 2] & 0x80) {// negative
-                            tag.cts = -((~tag.cts & 0xFFFFFF) + 1);
-                        }
-                        tag.pts += tag.cts;
-                        tag.payload_start += 3;
+                    tag.cts = this.data[this.offset + 2] << 16 | this.data[this.offset + 3] << 8 | this.data[this.offset + 4];
+                    if (this.data[this.offset + 2] & 0x80) {// negative
+                        tag.cts = -((~tag.cts & 0xFFFFFF) + 1);
                     }
+                    tag.pts += tag.cts;
+                    tag.payload_start += 3;
                 }
             }
             this.offset += tag.size;
