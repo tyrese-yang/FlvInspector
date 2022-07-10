@@ -311,9 +311,8 @@
             reader.onload = function (e) {
                 let buffer = reader.result;
                 parser = new FlvParser;
-                parser.setData(new Uint8Array(buffer));
                 parser.parseDone = flvParseDone;
-                parser.parseData();
+                parser.parseData(new Uint8Array(buffer));
             }
             reader.readAsArrayBuffer(file);
         }

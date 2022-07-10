@@ -150,12 +150,9 @@ class FlvParser {
         this.errorMsg = null
     }
 
-    setData(data) {
+    parseData(data) {
         this.data = data;
-        this.length = data.length
-    }
-
-    parseData() {
+        this.length = data.length;
         // 'F' 'L' 'V'
         if (this.data[0] != 70 || this.data[1] != 76 || this.data[2] != 86) {
             this.errorMsg = "not FLV file"
