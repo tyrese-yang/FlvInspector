@@ -65,7 +65,7 @@ input:hover + label {
     border-spacing: 0px;
     height: 95%;
     border-collapse: collapse;
-    overflow-y: scroll;
+    overflow: auto;
 }
 
 .tags-table table,
@@ -155,7 +155,7 @@ li.selected {
 
 .frame-info {
     height: 40%;
-    overflow-y: scroll;
+    overflow: auto;
     background-color: #303030;
 }
 
@@ -165,7 +165,7 @@ li.selected {
 
 .hexdump {
     height: 60%;
-    overflow-y: scroll;
+    overflow: auto;
     background-color: #202020;
     color: #fff;
     padding-left: 30px;
