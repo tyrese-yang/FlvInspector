@@ -34,7 +34,7 @@
     <script src="flv-parser.js" type="text/javascript"></script>
 
     <script>
-        const maxHexId = 100;
+        const maxHexId = 5000;
         function hexdump(data) {
             let lines = [];
             let hexId = 0;
@@ -139,7 +139,7 @@
                 videoHdrs.append("<li start-id='11' end-id='11'>Frame: " + tag.getFrameTypeText() + "</li>");
                 videoHdrs.append("<li start-id='11' end-id='11'>Codec: " + tag.getCodecName() + "</li>");
                 endId = 11;
-                if (tag.codecId == 7) {
+                if (tag.codecId == 7 || tag.codecId == 12) {
                     videoHdrs.append("<li start-id='12' end-id='12'>AVCPacketType: " + tag.avcPacketType + "</li>");
                     videoHdrs.append("<li start-id='13' end-id='15'>CTS: " + tag.cts+ "</li>");
                     endId = 15;
@@ -161,12 +161,12 @@
             let tagHeader = $("<li start-id='0' end-id='" + endId + "'><span class='caret'>TagHeader</span></li>");
             tagHeader.append(headers);
             let tagInfo = $("<ul/>");
-            let tagBody = $("<li'><span class='caret'>Data</span></li>");
+            let tagBody = $("<li><span class='caret'>Data</span></li>");
             tagInfo.append(tagHeader);
             tagInfo.append(tagBody);
 
             $("#frame-info").append(tagInfo);
-            if (tag.codecId == 7) {
+            if (tag.codecId == 7) { // H.264
                 if (tag.avcPacketType == 0) {
                     // Parse AVCDecoderConfigurationRecord
                     let configurationVersion = payload[0];
@@ -201,8 +201,14 @@
                 } else if (tag.avcPacketType == 1) {
                     for (let i = 0; i < payload.length;) {
                         let nalu_len = payload[i] << 24 | payload[i + 1] << 16 | payload[i + 2] << 8 | payload[i + 3];
+                        if (nalu_len <= 0 || i + 4 + nalu_len > payload.length) {
+                            break;
+                        }
                         let nalu_type;
                         switch (payload[i + 4] & 0x1f) {
+                            case 1:
+                                nalu_type = "Slice";
+                                break;
                             case 5:
                                 nalu_type = "IDR";
                                 break;
@@ -215,10 +221,105 @@
                             case 8:
                                 nalu_type = "PPS";
                                 break;
+                            case 9:
+                                nalu_type = "AUD";
+                                break;
                             default:
                                 nalu_type = payload[i + 4] & 0x1f;
                         }
-                        bodys.append("<li>NALU: " + nalu_type + "</li>");
+                        let start_id = tag.payload_start - tag.start + i;
+                        let end_id = tag.payload_start - tag.start + i + nalu_len + 3;
+                        bodys.append("<li start-id=" + start_id + " end-id=" + end_id + ">NALU: " + nalu_type + "</li>");
+                        i += nalu_len + 4;
+                    }
+                }
+            } else if (tag.codecId == 12) { // H.265
+                if (tag.avcPacketType == 0) {
+                    // Parse HEVCDecoderConfigurationRecord
+                    let configurationVersion = payload[0];
+                    let general_profile_space = (payload[1] >> 6) & 0x03;
+                    let general_tier_flag = (payload[1] >> 5) & 0x01;
+                    let general_profile_idc = payload[1] & 0x1f;
+                    bodys.append("<li start-id='16' end-id='16'>configurationVersion: " + configurationVersion + "</li>");
+                    bodys.append("<li start-id='17' end-id='17'>general_profile_space: " + general_profile_space + "</li>");
+                    bodys.append("<li start-id='17' end-id='17'>general_tier_flag: " + general_tier_flag + "</li>");
+                    bodys.append("<li start-id='17' end-id='17'>general_profile_idc: " + general_profile_idc + "</li>");
+                    
+                    let pos = 22; // Skip fixed fields, start from numOfArrays
+                    if (pos < payload.length) {
+                        let numOfArrays = payload[pos];
+                        bodys.append("<li start-id='" + (16 + pos) + "' end-id='" + (16 + pos) + "'>numOfArrays: " + numOfArrays + "</li>");
+                        pos++;
+                        
+                        for (let i = 0; i < numOfArrays; i++) {
+                            if (pos + 2 >= payload.length) break;
+                            let array_completeness = (payload[pos] >> 7) & 0x01;
+                            let NAL_unit_type = payload[pos] & 0x3f;
+                            let numNalus = (payload[pos + 1] << 8) | payload[pos + 2];
+                            let nalType = "";
+                            switch (NAL_unit_type) {
+                                case 32: nalType = "VPS"; break;
+                                case 33: nalType = "SPS"; break;
+                                case 34: nalType = "PPS"; break;
+                                default: nalType = "Type" + NAL_unit_type;
+                            }
+                            bodys.append("<li start-id='" + (16 + pos) + "' end-id='" + (16 + pos + 2) + "'>" + nalType + " numNalus: " + numNalus + "</li>");
+                            pos += 3;
+                            
+                            for (let j = 0; j < numNalus; j++) {
+                                if (pos + 1 >= payload.length) break;
+                                let nalUnitLength = (payload[pos] << 8) | payload[pos + 1];
+                                bodys.append("<li start-id='" + (16 + pos) + "' end-id='" + (16 + pos + 1) + "'>nalUnitLength: " + nalUnitLength + "</li>");
+                                bodys.append("<li start-id='" + (16 + pos + 2) + "' end-id='" + (16 + pos + 1 + nalUnitLength) + "'>" + nalType + "</li>");
+                                pos += 2 + nalUnitLength;
+                            }
+                        }
+                    }
+                } else if (tag.avcPacketType == 1) {
+                    for (let i = 0; i < payload.length;) {
+                        let nalu_len = payload[i] << 24 | payload[i + 1] << 16 | payload[i + 2] << 8 | payload[i + 3];
+                        if (nalu_len <= 0 || i + 4 + nalu_len > payload.length) {
+                            break;
+                        }
+                        let nalu_type;
+                        let nalu_type_val = (payload[i + 4] >> 1) & 0x3f;
+                        switch (nalu_type_val) {
+                            case 0:
+                            case 1:
+                                nalu_type = "Slice";
+                                break;
+                            case 16:
+                            case 17:
+                            case 18:
+                                nalu_type = "BLA";
+                                break;
+                            case 19:
+                            case 20:
+                            case 21:
+                                nalu_type = "IDR";
+                                break;
+                            case 32:
+                                nalu_type = "VPS";
+                                break;
+                            case 33:
+                                nalu_type = "SPS";
+                                break;
+                            case 34:
+                                nalu_type = "PPS";
+                                break;
+                            case 35:
+                                nalu_type = "AUD";
+                                break;
+                            case 39:
+                            case 40:
+                                nalu_type = "SEI";
+                                break;
+                            default:
+                                nalu_type = nalu_type_val;
+                        }
+                        let start_id = tag.payload_start - tag.start + i;
+                        let end_id = tag.payload_start - tag.start + i + nalu_len + 3;
+                        bodys.append("<li start-id=" + start_id + " end-id=" + end_id + ">NALU: " + nalu_type + "</li>");
                         i += nalu_len + 4;
                     }
                 }
@@ -336,12 +437,49 @@
                 let start = parseInt($(this).attr("start-id"));
                 let end = parseInt($(this).attr("end-id"));
                 $(this).addClass("selected");
-                for (let i = start; i <= end; i++) {
-                    $("[hex-id=" + i + "]").addClass("hex-selected");
+                const HIGHLIGHT_LIMIT = 200;
+                const SHORT_HIGHLIGHT = 10;
+                if (end - start + 1 > HIGHLIGHT_LIMIT) {
+                    // 只高亮前10字节
+                    for (let i = start; i < start + SHORT_HIGHLIGHT && i <= end; i++) {
+                        $("[hex-id=" + i + "]").addClass("hex-selected");
+                    }
+                    // 自动滚动到第一个字节
+                    let firstHex = $("[hex-id=" + start + "]");
+                    if (firstHex.length) {
+                        let container = $("#hexdump");
+                        let offset = firstHex.offset().top - container.offset().top + container.scrollTop();
+                        container.animate({scrollTop: offset - 40}, 200); // 适当留点空间
+                    }
+                    // 显示提示
+                    showToast("该数据段过大，仅高亮前10字节并自动定位");
+                } else {
+                    for (let i = start; i <= end; i++) {
+                        $("[hex-id=" + i + "]").addClass("hex-selected");
+                    }
                 }
                 e.stopPropagation();
             })
         })
+        // Toast提示实现
+        function showToast(msg) {
+            let toast = $("<div class='toast'></div>").text(msg);
+            toast.css({
+                position: 'fixed',
+                left: '50%',
+                top: '20%',
+                transform: 'translate(-50%, 0)',
+                background: 'rgba(0,0,0,0.8)',
+                color: '#fff',
+                padding: '12px 32px',
+                borderRadius: '8px',
+                zIndex: 9999,
+                fontSize: '18px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+            });
+            $("body").append(toast);
+            setTimeout(function(){ toast.fadeOut(400, function(){ toast.remove(); }); }, 1800);
+        }
     </script>
 </body>
 
