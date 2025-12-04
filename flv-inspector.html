@@ -32,6 +32,7 @@
     <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
     <script src="flv-metadata.js" type="text/javascript"></script>
     <script src="flv-parser.js" type="text/javascript"></script>
+    <script src="sps-parser.js" type="text/javascript"></script>
 
     <script>
         const maxHexId = 5000;
@@ -82,6 +83,37 @@
                 lines.push(line);
             }
             return '<pre id="hexdump-content">' + lines.join('\n') + '</pre>';
+        }
+
+        function renderSPS(data, codec) {
+            try {
+                let info = null;
+                if (codec === 'h264') {
+                    info = SPSParser.parseH264(data);
+                } else if (codec === 'h265') {
+                    info = SPSParser.parseH265(data);
+                }
+                
+                if (info) {
+                    let spsBox = $("<div class='sps-details-box'></div>");
+                    let ul = $("<ul/>");
+                    // Put key properties first
+                    if (info.width && info.height) {
+                         ul.append("<li><b>Resolution: " + info.width + "x" + info.height + "</b></li>");
+                    }
+                    for (let k in info) {
+                        if (k !== 'width' && k !== 'height') {
+                            ul.append("<li>" + k + ": " + info[k] + "</li>");
+                        }
+                    }
+                    spsBox.append(ul);
+                    return spsBox;
+                }
+            } catch (e) {
+                console.error("SPS Parse Error", e);
+                return $("<ul><li>Parse Error: " + e.message + "</li></ul>");
+            }
+            return null;
         }
 
         function showFlvHeader(e) {
@@ -185,7 +217,12 @@
                     for (let i = 0; i < numOfSequenceParameterSets; i++) {
                         let sequenceParameterSetLength = payload[pos] << 8 | payload[pos + 1];
                         bodys.append("<li start-id=" + (16 + pos) + " end-id=" + (16 + pos + 1) + ">sequenceParameterSetLength: " + sequenceParameterSetLength + "</li>");
-                        bodys.append("<li start-id=" + (16 + pos + 2) + " end-id=" + (16 + pos + 1 + sequenceParameterSetLength) + ">SPS</li>");
+                        
+                        let spsLi = $("<li start-id=" + (16 + pos + 2) + " end-id=" + (16 + pos + 1 + sequenceParameterSetLength) + ">SPS</li>");
+                        let spsDetails = renderSPS(payload.slice(pos + 2, pos + 2 + sequenceParameterSetLength), 'h264');
+                        if (spsDetails) spsLi.append(spsDetails);
+                        bodys.append(spsLi);
+                        
                         pos += 2 + sequenceParameterSetLength;
 
                     }
@@ -229,7 +266,12 @@
                         }
                         let start_id = tag.payload_start - tag.start + i;
                         let end_id = tag.payload_start - tag.start + i + nalu_len + 3;
-                        bodys.append("<li start-id=" + start_id + " end-id=" + end_id + ">NALU: " + nalu_type + "</li>");
+                        let naluLi = $("<li start-id=" + start_id + " end-id=" + end_id + ">NALU: " + nalu_type + "</li>");
+                        if (nalu_type === "SPS") {
+                             let spsDetails = renderSPS(payload.slice(i + 4, i + 4 + nalu_len), 'h264');
+                             if (spsDetails) naluLi.append(spsDetails);
+                        }
+                        bodys.append(naluLi);
                         i += nalu_len + 4;
                     }
                 }
@@ -269,10 +311,14 @@
                             for (let j = 0; j < numNalus; j++) {
                                 if (pos + 1 >= payload.length) break;
                                 let nalUnitLength = (payload[pos] << 8) | payload[pos + 1];
-                                bodys.append("<li start-id='" + (16 + pos) + "' end-id='" + (16 + pos + 1) + "'>nalUnitLength: " + nalUnitLength + "</li>");
-                                bodys.append("<li start-id='" + (16 + pos + 2) + "' end-id='" + (16 + pos + 1 + nalUnitLength) + "'>" + nalType + "</li>");
-                                pos += 2 + nalUnitLength;
-                            }
+                                                            bodys.append("<li start-id='" + (16 + pos) + "' end-id='" + (16 + pos + 1) + "'>nalUnitLength: " + nalUnitLength + "</li>");
+                                                            let nalLi = $("<li start-id='" + (16 + pos + 2) + "' end-id='" + (16 + pos + 1 + nalUnitLength) + "'>" + nalType + "</li>");
+                                                            if (nalType === "SPS") {
+                                                                let spsDetails = renderSPS(payload.slice(pos + 2, pos + 2 + nalUnitLength), 'h265');
+                                                                if (spsDetails) nalLi.append(spsDetails);
+                                                            }
+                                                            bodys.append(nalLi);
+                                                            pos += 2 + nalUnitLength;                            }
                         }
                     }
                 } else if (tag.avcPacketType == 1) {
@@ -319,7 +365,12 @@
                         }
                         let start_id = tag.payload_start - tag.start + i;
                         let end_id = tag.payload_start - tag.start + i + nalu_len + 3;
-                        bodys.append("<li start-id=" + start_id + " end-id=" + end_id + ">NALU: " + nalu_type + "</li>");
+                        let naluLi = $("<li start-id=" + start_id + " end-id=" + end_id + ">NALU: " + nalu_type + "</li>");
+                        if (nalu_type === "SPS") {
+                             let spsDetails = renderSPS(payload.slice(i + 4, i + 4 + nalu_len), 'h265');
+                             if (spsDetails) naluLi.append(spsDetails);
+                        }
+                        bodys.append(naluLi);
                         i += nalu_len + 4;
                     }
                 }
