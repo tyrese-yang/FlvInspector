@@ -213,3 +213,27 @@ ul {
     -webkit-transform: rotate(90deg); /* Safari */
     transform: rotate(90deg);  
 }
+
+/* SPS Info Box */
+.sps-details-box {
+    background-color: #404040; /* Slightly lighter than frame-info background */
+    border: 1px solid #606060;
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin: 5px 0 10px 15px; /* Indent slightly */
+    font-size: 0.85em; /* Smaller font */
+    color: #E5E7E9; /* Lighter text color */
+}
+
+.sps-details-box ul {
+    margin: 0;
+    padding: 0 0 0 15px; /* Adjust padding for list inside the box */
+    list-style-type: disc; /* Use disc for list items inside box */
+}
+
+.sps-details-box li {
+    width: auto; /* Override .frame-info li width */
+    margin: 0;
+    padding: 2px 0;
+    text-indent: 0; /* Remove text-indent */
+}
