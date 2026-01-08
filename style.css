@@ -43,16 +43,19 @@ input:hover + label {
 
 /* Frame table */
 .tags-window {
-    display: block;
+    display: flex;
+    flex-direction: column;
     width: 40%;
     height: 100%;
     background-color: #505050;
+    overflow: hidden;
 }
 
 .frame-select {
     background-color: #404040;
     border: none;
-    height: 40;
+    height: 40px;
+    flex-shrink: 0;
     width: 100%;
     color: #E5E7E9;
     text-align: center;
@@ -63,7 +66,7 @@ input:hover + label {
 
 .tags-table {
     border-spacing: 0px;
-    height: 95%;
+    flex: 1;
     border-collapse: collapse;
     overflow: auto;
 }
@@ -78,11 +81,10 @@ td {
     color: #fff;
 }
 
-.tags-table tr.selected {
-    background-color: #808080 !important;
-    color: #fff;
-    vertical-align: middle;
-    padding: 1.5em;
+/* Hover effect for non-selected rows */
+.tags-table tbody tr:hover:not(.selected) {
+    background-color: #606060 !important;
+    cursor: pointer;
 }
 
 table {
@@ -143,9 +145,11 @@ table:nth-of-type(2) th:not([scope=row]):first-child {
 
 /* Frame Detail */
 .tag-detail {
-    display: block;
+    display: flex;
+    flex-direction: column;
     width: 55%;
     height: 100%;
+    overflow: hidden;
 }
 
 li.selected {
@@ -155,6 +159,7 @@ li.selected {
 
 .frame-info {
     height: 40%;
+    flex-shrink: 0;
     overflow: auto;
     background-color: #303030;
 }
@@ -164,7 +169,7 @@ li.selected {
 }
 
 .hexdump {
-    height: 60%;
+    flex: 1;
     overflow: auto;
     background-color: #202020;
     color: #fff;
@@ -236,4 +241,160 @@ ul {
     margin: 0;
     padding: 2px 0;
     text-indent: 0; /* Remove text-indent */
+}
+
+/* Tag type colors */
+.tags-table tr.tag-video {
+    background-color: rgba(76, 175, 80, 0.3); /* Green */
+}
+
+.tags-table tr.tag-audio {
+    background-color: rgba(33, 150, 243, 0.3); /* Blue */
+}
+
+.tags-table tr.tag-script {
+    background-color: rgba(255, 152, 0, 0.3); /* Orange */
+}
+
+/* Hover effect for tag type rows */
+.tags-table tr.tag-video:hover:not(.selected),
+.tags-table tr.tag-audio:hover:not(.selected),
+.tags-table tr.tag-script:hover:not(.selected) {
+    filter: brightness(1.3);
+    cursor: pointer;
+}
+
+/* Selected state - highest priority, must override tag type colors */
+.tags-table tr.selected,
+.tags-table tr.tag-video.selected,
+.tags-table tr.tag-audio.selected,
+.tags-table tr.tag-script.selected {
+    background-color: #0066cc !important;
+    color: #fff !important;
+}
+
+/* Hover on selected rows */
+.tags-table tr.selected:hover,
+.tags-table tr.tag-video.selected:hover,
+.tags-table tr.tag-audio.selected:hover,
+.tags-table tr.tag-script.selected:hover {
+    background-color: #0077ee !important;
+}
+
+/* Filter toolbar */
+.filter-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background-color: #404040;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+}
+
+.filter-toolbar select {
+    background-color: #505050;
+    border: 1px solid #666;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.filter-toolbar label {
+    color: #ccc;
+    font-size: 13px;
+}
+
+/* Keyframe navigation */
+.keyframe-nav {
+    display: flex;
+    gap: 5px;
+}
+
+.keyframe-nav button {
+    background-color: #505050;
+    border: 1px solid #666;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.keyframe-nav button:hover {
+    background-color: #606060;
+}
+
+.keyframe-nav button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Statistics panel */
+.stats-panel {
+    background-color: #353535;
+    padding: 10px 15px;
+    border-bottom: 1px solid #444;
+    font-size: 13px;
+    color: #ddd;
+    display: none;
+    flex-shrink: 0;
+}
+
+.stats-panel.visible {
+    display: block;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px 20px;
+}
+
+.stats-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.stats-item .label {
+    color: #999;
+}
+
+.stats-item .value {
+    color: #fff;
+    font-weight: bold;
+}
+
+/* Navigate area adjustments */
+.navigate {
+    width: 80px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px 5px;
+}
+
+.nav-btn {
+    background-color: #303030;
+    border: none;
+    color: #fff;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 11px;
+    text-align: center;
+}
+
+.nav-btn:hover {
+    background-color: #505050;
+}
+
+.nav-btn.active {
+    background-color: #606060;
 }

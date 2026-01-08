@@ -15,11 +15,47 @@
         </div>
 
         <div class="tags-window">
+            <!-- Statistics Panel -->
+            <div class="stats-panel" id="stats-panel">
+                <div class="stats-grid">
+                    <div class="stats-item"><span class="label">Duration:</span><span class="value" id="stat-duration">-</span></div>
+                    <div class="stats-item"><span class="label">Total Tags:</span><span class="value" id="stat-total">-</span></div>
+                    <div class="stats-item"><span class="label">Video Tags:</span><span class="value" id="stat-video">-</span></div>
+                    <div class="stats-item"><span class="label">Audio Tags:</span><span class="value" id="stat-audio">-</span></div>
+                    <div class="stats-item"><span class="label">Keyframes:</span><span class="value" id="stat-keyframes">-</span></div>
+                    <div class="stats-item"><span class="label">Resolution:</span><span class="value" id="stat-resolution">-</span></div>
+                    <div class="stats-item"><span class="label">Video Codec:</span><span class="value" id="stat-video-codec">-</span></div>
+                    <div class="stats-item"><span class="label">Audio Codec:</span><span class="value" id="stat-audio-codec">-</span></div>
+                    <div class="stats-item"><span class="label">Video Bitrate:</span><span class="value" id="stat-video-bitrate">-</span></div>
+                    <div class="stats-item"><span class="label">Audio Bitrate:</span><span class="value" id="stat-audio-bitrate">-</span></div>
+                </div>
+            </div>
+            <!-- Filter Toolbar -->
+            <div class="filter-toolbar">
+                <label>Type:</label>
+                <select id="filter-type" onchange="applyFilter()">
+                    <option value="all">All</option>
+                    <option value="video">Video</option>
+                    <option value="audio">Audio</option>
+                    <option value="script">Script</option>
+                </select>
+                <label>Frame:</label>
+                <select id="filter-frame" onchange="applyFilter()">
+                    <option value="all">All</option>
+                    <option value="key">Keyframe</option>
+                    <option value="inter">Inter Frame</option>
+                    <option value="header">Header</option>
+                </select>
+                <div class="keyframe-nav">
+                    <button id="btn-prev-key" onclick="jumpToKeyframe(-1)" title="Previous Keyframe">&lt; Prev Key</button>
+                    <button id="btn-next-key" onclick="jumpToKeyframe(1)" title="Next Keyframe">Next Key &gt;</button>
+                </div>
+            </div>
             <select class="frame-select" id="frame-range" onchange="rangeChange()">
                 <option>Frame range</option>
             </select>
             <div class="tags-table">
-                <table  id="tags-info"></table>
+                <table id="tags-info"></table>
             </div>
         </div>
 
@@ -36,6 +72,28 @@
 
     <script>
         const maxHexId = 5000;
+        
+        // Global state for filtering and selection
+        var filterState = {
+            type: 'all',      // all, video, audio, script
+            frame: 'all',     // all, key, inter, header
+            selectedTagIndex: -1,  // Original index in parser.tags
+            filteredTags: []  // Array of {originalIndex, tag}
+        };
+
+        // Statistics data
+        var statsData = {
+            duration: 0,
+            totalTags: 0,
+            videoTags: 0,
+            audioTags: 0,
+            keyframes: 0,
+            keyframeIntervals: [],
+            videoBytes: 0,
+            audioBytes: 0,
+            resolution: null
+        };
+
         function hexdump(data) {
             let lines = [];
             let hexId = 0;
@@ -121,7 +179,11 @@
             $('.selected').removeClass('selected');
             $(this).addClass("selected");
             document.getElementById("hexdump").innerHTML = "";
-            document.getElementById("frame-info").innerHTML = ""
+            document.getElementById("frame-info").innerHTML = "";
+            
+            // Reset selected tag index (FLV header is not a tag)
+            filterState.selectedTagIndex = -1;
+            updateKeyframeButtons();
             let headers = $("<ul/>");
             headers.append("<li start-id='3' end-id='3'>Version: " + parser.version + "</li>");
             headers.append("<li start-id='4' end-id='4'>HaveVideo: " + parser.haveVideo + "</li>");
@@ -136,10 +198,11 @@
         }
 
         function showTagDetail(e) {
-            $('.selected').removeClass('selected');
-            $(this).addClass("selected");
             document.getElementById("hexdump").innerHTML = "";
-            document.getElementById("frame-info").innerHTML = ""
+            document.getElementById("frame-info").innerHTML = "";
+            
+            // Update keyframe buttons
+            updateKeyframeButtons();
 
             let tag = e.data;
             let payload = parser.data.slice(tag.payload_start, tag.end);
@@ -381,9 +444,103 @@
         }
 
         const max_range = 1000;
-        // show range [start : end)
-        function showRange(start, end) {
-            console.log(start, end);
+
+        // Filter tags based on current filter state
+        function getFilteredTags() {
+            if (!parser || !parser.tags) return [];
+            
+            let filtered = [];
+            for (let i = 0; i < parser.tags.length; i++) {
+                let tag = parser.tags[i];
+                
+                // Type filter
+                if (filterState.type !== 'all') {
+                    if (filterState.type === 'video' && tag.type !== 9) continue;
+                    if (filterState.type === 'audio' && tag.type !== 8) continue;
+                    if (filterState.type === 'script' && tag.type !== 18) continue;
+                }
+                
+                // Frame filter
+                if (filterState.frame !== 'all') {
+                    if (filterState.frame === 'key') {
+                        // Only video keyframes
+                        if (tag.type !== 9 || tag.frameType !== 1) continue;
+                    } else if (filterState.frame === 'inter') {
+                        // Only video inter frames
+                        if (tag.type !== 9 || tag.frameType !== 2) continue;
+                    } else if (filterState.frame === 'header') {
+                        // Only header packets (AVC/HEVC sequence header or AAC config)
+                        let isHeader = false;
+                        if (tag.type === 9 && (tag.codecId === 7 || tag.codecId === 12) && tag.avcPacketType === 0) {
+                            isHeader = true;
+                        }
+                        if (tag.type === 8 && tag.soundFormat === 10 && tag.aacPacketType === 0) {
+                            isHeader = true;
+                        }
+                        if (!isHeader) continue;
+                    }
+                }
+                
+                filtered.push({ originalIndex: i, tag: tag });
+            }
+            return filtered;
+        }
+
+        // Apply filter and refresh display
+        function applyFilter() {
+            filterState.type = $("#filter-type").val();
+            filterState.frame = $("#filter-frame").val();
+            filterState.filteredTags = getFilteredTags();
+            
+            // Update range selector
+            updateRangeSelector();
+            
+            // Show first range, try to keep selected tag visible
+            let targetPage = 0;
+            if (filterState.selectedTagIndex >= 0) {
+                // Find if selected tag is in filtered results
+                for (let i = 0; i < filterState.filteredTags.length; i++) {
+                    if (filterState.filteredTags[i].originalIndex === filterState.selectedTagIndex) {
+                        targetPage = Math.floor(i / max_range) * max_range;
+                        break;
+                    }
+                }
+            }
+            
+            $("#frame-range").val(targetPage);
+            let end = Math.min(targetPage + max_range, filterState.filteredTags.length);
+            showFilteredRange(targetPage, end);
+        }
+
+        // Update range selector based on filtered tags
+        function updateRangeSelector() {
+            $("#frame-range").empty();
+            let total = filterState.filteredTags.length;
+            
+            if (total === 0) {
+                $("#frame-range").append($("<option value=0>No matching tags</option>"));
+                return;
+            }
+            
+            for (let i = 0; i < total; i += max_range) {
+                let start = i + 1;
+                let end = Math.min(i + max_range, total);
+                $("#frame-range").append($("<option value=" + i + "> No. " + start + "~" + end + " (of " + total + ")</option>"));
+            }
+        }
+
+        // Get tag row CSS class based on type
+        function getTagTypeClass(tag) {
+            switch (tag.type) {
+                case 9: return 'tag-video';
+                case 8: return 'tag-audio';
+                case 18: return 'tag-script';
+                default: return '';
+            }
+        }
+
+        // show filtered range [start : end)
+        function showFilteredRange(start, end) {
             document.getElementById("frame-info").innerHTML = "";
             document.getElementById("tags-info").innerHTML = "";
             document.getElementById("hexdump").innerHTML = "";
@@ -393,7 +550,9 @@
             tableRow.append($("<th>No.</th><th>Type</th><th>Codec</th><th>DTS</th><th>PTS</th><th>Size</th><th>Frame</th>"));
             tableHeader.append(tableRow);
             $("#tags-info").append(tableHeader);
-            if (start == 0) {
+            
+            // Show FLV header only on first page with no filter
+            if (start == 0 && filterState.type === 'all' && filterState.frame === 'all') {
                 let tableBody = $("<tbody></tbody>");
                 let tableRow = $("<tr></tr>");
                 tableRow.append("<td>0</td><td>-</td><td>-</td><td>-</td><td>-</td><td>9</td><td>FLV Header</td>");
@@ -401,9 +560,13 @@
                 tableBody.append(tableRow);
                 $("#tags-info").append(tableBody);
             }
-            for (let i = start; i < end; i++) {
-                let tag = parser.tags[i];
-                let frameType = ""
+            
+            for (let i = start; i < end && i < filterState.filteredTags.length; i++) {
+                let item = filterState.filteredTags[i];
+                let tag = item.tag;
+                let originalIndex = item.originalIndex;
+                
+                let frameType = "";
                 if (tag.type == 9 && tag.frameType == 1) {
                     frameType = "Key";
                     if (tag.avcPacketType == 0) {
@@ -414,38 +577,318 @@
                         frameType = "Header";
                     }
                 }
+                
                 let tableBody = $("<tbody></tbody>");
                 let tableRow = $("<tr></tr>");
-                let num = i + 1;
+                let typeClass = getTagTypeClass(tag);
+                if (typeClass) tableRow.addClass(typeClass);
+                
+                // Highlight if this is the selected tag
+                if (originalIndex === filterState.selectedTagIndex) {
+                    tableRow.addClass("selected");
+                }
+                
+                let num = originalIndex + 1;
                 tableRow.append("<td>" + num + "</td><td>" + tag.getTypeName() + "</td><td>" + tag.getCodecName() + "</td><td>" + tag.dts + "</td><td>" + tag.pts + "</td><td>" + tag.size + "</td><td>" + frameType + "</td>");
-                tableRow.click(tag, showTagDetail);
+                tableRow.attr("data-original-index", originalIndex);
+                tableRow.click(tag, function(e) {
+                    filterState.selectedTagIndex = parseInt($(this).attr("data-original-index"));
+                    // Remove selected from all rows and add to clicked row
+                    $('.selected').removeClass('selected');
+                    $(this).addClass("selected");
+                    showTagDetail(e);
+                });
                 tableBody.append(tableRow);
                 $("#tags-info").append(tableBody);
             }
+            
+            updateKeyframeButtons();
+        }
+
+        // show range [start : end) - legacy function, now uses filtered version
+        function showRange(start, end) {
+            filterState.filteredTags = getFilteredTags();
+            updateRangeSelector();
+            let filteredEnd = Math.min(start + max_range, filterState.filteredTags.length);
+            showFilteredRange(start, filteredEnd);
         }
 
         function rangeChange() {
             let start = parseInt($("#frame-range option:selected").val());
-            let end = start + max_range;
-            showRange(start, end);
+            let end = Math.min(start + max_range, filterState.filteredTags.length);
+            showFilteredRange(start, end);
+        }
+
+        // Jump to next/previous keyframe
+        function jumpToKeyframe(direction) {
+            if (!parser || !parser.tags) return;
+            
+            let currentIndex = filterState.selectedTagIndex;
+            let startSearch = currentIndex >= 0 ? currentIndex + direction : (direction > 0 ? 0 : parser.tags.length - 1);
+            
+            // Find next/previous keyframe in original tags array
+            let keyframeIndex = -1;
+            if (direction > 0) {
+                for (let i = startSearch; i < parser.tags.length; i++) {
+                    let tag = parser.tags[i];
+                    if (tag.type === 9 && tag.frameType === 1) {
+                        keyframeIndex = i;
+                        break;
+                    }
+                }
+            } else {
+                for (let i = startSearch; i >= 0; i--) {
+                    let tag = parser.tags[i];
+                    if (tag.type === 9 && tag.frameType === 1) {
+                        keyframeIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            if (keyframeIndex < 0) {
+                showToast(direction > 0 ? "No more keyframes" : "No previous keyframe");
+                return;
+            }
+            
+            // Update selection
+            filterState.selectedTagIndex = keyframeIndex;
+            
+            // Find this keyframe in filtered list
+            let filteredIndex = -1;
+            for (let i = 0; i < filterState.filteredTags.length; i++) {
+                if (filterState.filteredTags[i].originalIndex === keyframeIndex) {
+                    filteredIndex = i;
+                    break;
+                }
+            }
+            
+            if (filteredIndex >= 0) {
+                // Keyframe is visible in current filter, navigate to its page
+                let targetPage = Math.floor(filteredIndex / max_range) * max_range;
+                $("#frame-range").val(targetPage);
+                let end = Math.min(targetPage + max_range, filterState.filteredTags.length);
+                showFilteredRange(targetPage, end);
+                
+                // Scroll to and highlight the row
+                setTimeout(function() {
+                    let row = $("tr[data-original-index='" + keyframeIndex + "']");
+                    if (row.length) {
+                        row[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        row.click();
+                    }
+                }, 50);
+            } else {
+                // Keyframe not in current filter, temporarily show all and navigate
+                $("#filter-type").val('all');
+                $("#filter-frame").val('all');
+                applyFilter();
+                
+                // Find again in unfiltered list
+                for (let i = 0; i < filterState.filteredTags.length; i++) {
+                    if (filterState.filteredTags[i].originalIndex === keyframeIndex) {
+                        filteredIndex = i;
+                        break;
+                    }
+                }
+                
+                let targetPage = Math.floor(filteredIndex / max_range) * max_range;
+                $("#frame-range").val(targetPage);
+                let end = Math.min(targetPage + max_range, filterState.filteredTags.length);
+                showFilteredRange(targetPage, end);
+                
+                setTimeout(function() {
+                    let row = $("tr[data-original-index='" + keyframeIndex + "']");
+                    if (row.length) {
+                        row[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        row.click();
+                    }
+                }, 50);
+                
+                showToast("Filter reset to show keyframe");
+            }
+        }
+
+        // Update keyframe navigation button states
+        function updateKeyframeButtons() {
+            if (!parser || !parser.tags) {
+                $("#btn-prev-key, #btn-next-key").prop("disabled", true);
+                return;
+            }
+            
+            let currentIndex = filterState.selectedTagIndex;
+            
+            // Check if there's a previous keyframe
+            let hasPrev = false;
+            for (let i = currentIndex - 1; i >= 0; i--) {
+                if (parser.tags[i].type === 9 && parser.tags[i].frameType === 1) {
+                    hasPrev = true;
+                    break;
+                }
+            }
+            
+            // Check if there's a next keyframe
+            let hasNext = false;
+            for (let i = currentIndex + 1; i < parser.tags.length; i++) {
+                if (parser.tags[i].type === 9 && parser.tags[i].frameType === 1) {
+                    hasNext = true;
+                    break;
+                }
+            }
+            
+            $("#btn-prev-key").prop("disabled", !hasPrev);
+            $("#btn-next-key").prop("disabled", !hasNext);
+        }
+
+        // Calculate and display statistics
+        function calculateStats() {
+            if (!parser || !parser.tags || parser.tags.length === 0) return;
+            
+            statsData = {
+                duration: 0,
+                totalTags: parser.tags.length,
+                videoTags: 0,
+                audioTags: 0,
+                keyframes: 0,
+                videoBytes: 0,
+                audioBytes: 0,
+                resolution: null,
+                videoCodec: null,
+                audioCodec: null
+            };
+            
+            let mediaDtsList = [];
+            
+            for (let i = 0; i < parser.tags.length; i++) {
+                let tag = parser.tags[i];
+                
+                if (tag.type === 9) {
+                    // Video tag
+                    statsData.videoTags++;
+                    statsData.videoBytes += tag.size;
+                    
+                    // Get video codec from first video tag
+                    if (!statsData.videoCodec) {
+                        statsData.videoCodec = tag.getCodecName();
+                    }
+                    
+                    // Only use actual media data for duration (exclude sequence headers)
+                    let isSequenceHeader = (tag.codecId === 7 || tag.codecId === 12) && tag.avcPacketType === 0;
+                    if (!isSequenceHeader) {
+                        mediaDtsList.push(tag.dts);
+                    }
+                    
+                    if (tag.frameType === 1) {
+                        statsData.keyframes++;
+                    }
+                } else if (tag.type === 8) {
+                    // Audio tag
+                    statsData.audioTags++;
+                    statsData.audioBytes += tag.size;
+                    
+                    // Get audio codec from first audio tag
+                    if (!statsData.audioCodec) {
+                        statsData.audioCodec = tag.getCodecName();
+                    }
+                    
+                    // Only use actual media data for duration (exclude AAC config)
+                    let isAudioConfig = tag.soundFormat === 10 && tag.aacPacketType === 0;
+                    if (!isAudioConfig) {
+                        mediaDtsList.push(tag.dts);
+                    }
+                } else if (tag.type === 18) {
+                    // Script tag - try to get resolution from metadata
+                    try {
+                        let payload = parser.data.slice(tag.payload_start, tag.end);
+                        let metadata = parseMetadata(String.fromCharCode.apply(null, payload));
+                        if (metadata && metadata.width && metadata.height) {
+                            statsData.resolution = metadata.width + "x" + metadata.height;
+                        }
+                    } catch (e) {}
+                }
+            }
+            
+            // Calculate duration from media DTS values
+            if (mediaDtsList.length > 0) {
+                mediaDtsList.sort((a, b) => a - b);
+                let minDts = mediaDtsList[0];
+                let maxDts = mediaDtsList[mediaDtsList.length - 1];
+                statsData.duration = maxDts - minDts;
+            }
+            
+            // Update UI
+            $("#stat-duration").text(formatDuration(statsData.duration));
+            $("#stat-total").text(statsData.totalTags);
+            $("#stat-video").text(statsData.videoTags);
+            $("#stat-audio").text(statsData.audioTags);
+            $("#stat-keyframes").text(statsData.keyframes);
+            $("#stat-video-codec").text(statsData.videoCodec || "-");
+            $("#stat-audio-codec").text(statsData.audioCodec || "-");
+            
+            // Calculate bitrates
+            if (statsData.duration > 0) {
+                let videoBitrate = (statsData.videoBytes * 8) / (statsData.duration / 1000) / 1000;
+                let audioBitrate = (statsData.audioBytes * 8) / (statsData.duration / 1000) / 1000;
+                $("#stat-video-bitrate").text(videoBitrate.toFixed(0) + " kbps");
+                $("#stat-audio-bitrate").text(audioBitrate.toFixed(0) + " kbps");
+            } else {
+                $("#stat-video-bitrate").text("-");
+                $("#stat-audio-bitrate").text("-");
+            }
+            
+            $("#stat-resolution").text(statsData.resolution || "-");
+            
+            // Show stats panel
+            $("#stats-panel").addClass("visible");
+        }
+
+        // Format duration in ms to readable string
+        function formatDuration(ms) {
+            if (ms <= 0) return "-";
+            let seconds = Math.floor(ms / 1000);
+            let minutes = Math.floor(seconds / 60);
+            let hours = Math.floor(minutes / 60);
+            
+            seconds = seconds % 60;
+            minutes = minutes % 60;
+            
+            if (hours > 0) {
+                return hours + "h " + minutes + "m " + seconds + "s";
+            } else if (minutes > 0) {
+                return minutes + "m " + seconds + "s";
+            } else {
+                return seconds + "s " + (ms % 1000) + "ms";
+            }
         }
 
         function flvParseDone() {
             if (parser.errorMsg) {
                 alert(parser.errorMsg)
                 $("#frame-range").empty();
+                $("#stats-panel").removeClass("visible");
                 return
             }
-            $("#frame-range").empty();
-            for (let i = 0; i < parser.tags.length; i += max_range) {
-                let start = i + 1;
-                let end = i + max_range < parser.tags.length ? i + max_range : parser.tags.length;
-                $("#frame-range").append($("<option value=" + i + "> No. " + start + "~" + end + "</end>"));
-            }
+            
+            // Reset filter state
+            filterState = {
+                type: 'all',
+                frame: 'all',
+                selectedTagIndex: -1,
+                filteredTags: []
+            };
+            $("#filter-type").val('all');
+            $("#filter-frame").val('all');
+            
+            // Calculate and display statistics
+            calculateStats();
+            
+            // Initialize filtered tags
+            filterState.filteredTags = getFilteredTags();
+            updateRangeSelector();
 
-            //show first range
-            let first_range = parser.tags.length > max_range ? max_range : parser.tags.length;
-            showRange(0, first_range);
+            // Show first range
+            let first_range = filterState.filteredTags.length > max_range ? max_range : filterState.filteredTags.length;
+            showFilteredRange(0, first_range);
         }
     </script>
 
